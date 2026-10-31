@@ -46,6 +46,14 @@ def _py(v):
     return v
 
 
+def _span(start, end, tz=None) -> str:
+    """'Wed 22 Jan 06:00–12:00 local' when the airport time zone is known, else UTC."""
+    if tz:
+        a, b = _utc(start).tz_convert(tz), _utc(end).tz_convert(tz)
+        return f"{a:%a %d %b %H:%M}–{b:%H:%M} local"
+    return f"{_fmt(start)}–{_utc(end):%H:%MZ}"
+
+
 def _ev(signal, value, unit="", ts=None, source="", threshold=None) -> dict:
     return {"signal": signal, "value": _py(value), "unit": unit,
             "obs_or_valid_time": _fmt(ts), "source": source, "threshold": threshold}
@@ -119,7 +127,7 @@ def _wx_window(wx, now, lookback_h):
 
 
 # ---------- rules ----------
-def rule_stress(blocks: pd.DataFrame, now_utc, cfg=RULES) -> Rec:
+def rule_stress(blocks: pd.DataFrame, now_utc, cfg=RULES, tz=None) -> Rec:
     now = _utc(now_utc)
     if blocks is None or blocks.empty:
         return Rec("NORMAL", "No action from this rule.", "No capacity forecast available for this window.", [])
@@ -134,27 +142,29 @@ def rule_stress(blocks: pd.DataFrame, now_utc, cfg=RULES) -> Rec:
     pred, p80, p90 = float(r["stress_rate_pred"]), float(r[wc]), float(r[ac])
     start = r["block_start_utc"]
     end = r["block_end_utc"] if _has(r, "block_end_utc") else start + pd.Timedelta(hours=BLOCK_HOURS)
-    block = f"{_fmt(start)}–{_utc(end):%H:%MZ}"
+    block = _span(start, end, tz)
     src = "capacity_preds.parquet"
     if _has(r, "horizon_h"):
         src += f" (horizon {int(r['horizon_h'])}h, issued {_fmt(r.get('issue_time_utc'))})"
     hist_src = str(r["hist_source"]) if _has(r, "hist_source") else "train period"
     ev = [_ev("predicted stress_rate (peak block)", pred, "share of flights", start, src),
-          _ev("airport threshold p80", p80, "share of flights", None, hist_src, "WATCH if above"),
-          _ev("airport threshold p90", p90, "share of flights", None, hist_src, "ACTION if above")]
+          _ev(f"WATCH line (worse than {cfg.get('stress_watch_q', 0.8):.0%} of past blocks)", p80, "share of flights", None, hist_src, "WATCH if above"),
+          _ev(f"ACTION line (worse than {cfg.get('stress_action_q', 0.9):.0%} of past blocks)", p90, "share of flights", None, hist_src, "ACTION if above")]
     if _has(r, "baseline_hist"):
         ev.append(_ev("historical normal for this block (baseline_hist)", r["baseline_hist"], "share of flights", start, "capacity_preds.parquet"))
     if _has(r, "baseline_persist"):
         ev.append(_ev("persistence baseline", r["baseline_persist"], "share of flights", start, "capacity_preds.parquet"))
-    txt = f"Predicted stress {pred*100:.0f}/100 flights for block {block}"
+    txt = f"About {pred*100:.0f} of every 100 flights are expected to be disrupted in {block}"
     if pred > p90:
-        return Rec("ACTION", f"Consider reducing arrival rate / ground delay program for block {block}.",
-                   f"{txt} is above the airport's 90th percentile ({p90*100:.0f}/100).", ev)
+        return Rec("ACTION", f"Consider reducing the arrival rate / a ground delay program for {block}.",
+                   f"{txt}. That is worse than {cfg.get('stress_action_q', 0.9):.0%} of past blocks "
+                   f"at this airport (ACTION line {p90*100:.0f}/100).", ev)
     if pred > p80:
-        return Rec("WATCH", f"Pre-brief ATC flow coordinator; review arrival rate for block {block}.",
-                   f"{txt} is above the airport's 80th percentile ({p80*100:.0f}/100).", ev)
+        return Rec("WATCH", f"Pre-brief the ATC flow coordinator; review the arrival rate for {block}.",
+                   f"{txt}. That is worse than {cfg.get('stress_watch_q', 0.8):.0%} of past blocks "
+                   f"at this airport (WATCH line {p80*100:.0f}/100).", ev)
     return Rec("NORMAL", "No action from this rule.",
-               f"{txt} is within the normal band (≤ p80 {p80*100:.0f}/100).", ev)
+               f"{txt}, within the normal range (WATCH line {p80*100:.0f}/100).", ev)
 
 
 def rule_crosswind(wx: pd.DataFrame, now_utc, cfg=RULES) -> Rec:
@@ -250,13 +260,13 @@ def rule_flight_share(flights: pd.DataFrame, now_utc, horizon_h, cfg=RULES) -> R
     return Rec("NORMAL", "No action from this rule.", reason, ev)
 
 
-def evaluate_all(cap, wx, flights, now_utc, horizon_h, cfg=RULES):
+def evaluate_all(cap, wx, flights, now_utc, horizon_h, cfg=RULES, tz=None):
     now = _utc(now_utc)
     return [
-        ("Capacity stress forecast", rule_stress(window_blocks(cap, now, horizon_h), now, cfg)),
-        ("Crosswind vs runway heading", rule_crosswind(wx, now, cfg)),
-        (f"Observed weather (last {cfg['wx_lookback_h']}h)", rule_weather_obs(wx, now, cfg)),
-        ("At-risk flight share", rule_flight_share(flights, now, horizon_h, cfg)),
+        ("Airport congestion forecast", rule_stress(window_blocks(cap, now, horizon_h), now, cfg, tz)),
+        ("Crosswind on the runway", rule_crosswind(wx, now, cfg)),
+        (f"Weather right now (last {cfg['wx_lookback_h']}h)", rule_weather_obs(wx, now, cfg)),
+        ("Flights likely to run late", rule_flight_share(flights, now, horizon_h, cfg)),
     ]
 
 

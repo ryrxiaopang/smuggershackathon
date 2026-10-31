@@ -1,7 +1,11 @@
 """Dashboard + rules configuration. Thresholds live here so they are easy to tune."""
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+import config as _shared  # noqa: E402  airports, time zones, runway headings, split dates
 OUTPUTS = ROOT / "outputs"
 PROCESSED = ROOT / "data" / "processed"
 CAPACITY_PREDS = OUTPUTS / "capacity_preds.parquet"
@@ -9,46 +13,42 @@ FLIGHT_PREDS = OUTPUTS / "flight_risk_preds.parquet"
 WEATHER_TIMELINE = PROCESSED / "weather_timeline.parquet"
 DECISION_LOG = OUTPUTS / "decision_log.csv"
 
-# Brief assumptions. Any airport works; unknown airports fall back to UTC display.
-RUNWAY_HEADING = {"ATL": 80, "DFW": 180}
-AIRPORT_TZ = {"ATL": "America/New_York", "DFW": "America/Chicago"}
+# From the shared config: ATL 80 / DFW 180 (brief) plus any airport looked up by src/airports.py.
+RUNWAY_HEADING = _shared.RUNWAY_HEADING
+AIRPORT_TZ = _shared.AIRPORT_TZ
 
 HORIZONS = [3, 6, 12]
-BLOCK_HOURS = 3
-TEST_START, TEST_END = "2025-01-01", "2025-07-31"
+BLOCK_HOURS = _shared.BLOCK_HOURS  # 6h blocks, as in capacity_model.py
+TRAIN_END = _shared.TRAIN_END
+TEST_START, TEST_END = _shared.TEST_START, _shared.TEST_END
 
-WX_GROUP_ORDER = ["clear", "cloudy", "fog", "rain", "showers", "freezing", "snow", "thunderstorm"]
+# Weather groups exactly as the pipeline writes them (config.COCO_GROUP), mildest first.
+WX_GROUP_ORDER = ["clear", "cloud", "fog", "rain", "freezing", "snow", "storm"]
 
 
 def coco_to_group(c):
-    """Meteostat condition code -> coarse weather group."""
+    """Meteostat condition code -> weather group, same mapping as the pipeline."""
     try:
-        c = int(c)
+        return _shared.COCO_GROUP.get(int(c), "unknown")
     except (TypeError, ValueError):
         return "unknown"
-    if c <= 2: return "clear"
-    if c <= 4: return "cloudy"
-    if c <= 6: return "fog"
-    if c <= 9: return "rain"
-    if c <= 13: return "freezing"
-    if c <= 16: return "snow"
-    if c <= 18: return "showers"
-    if c <= 20: return "freezing"
-    if c <= 22: return "snow"
-    return "thunderstorm"
 
 
 RULES = {
-    # capacity stress: compare prediction with the airport's historical percentiles (columns in capacity file)
-    "stress_watch_col": "hist_p80",
-    "stress_action_col": "hist_p90",
+    # capacity stress: compare the prediction with how disrupted this airport's 6h blocks really were in
+    # the TRAIN period (realised share of stressed flights, blocks with >=3 flights). On the 2025 test set
+    # (h=6) this flags ACTION on 1.9% of blocks (actual 39/100 disrupted vs 10/100 when NORMAL).
+    "stress_watch_col": "hist_watch",
+    "stress_action_col": "hist_action",
+    "stress_watch_q": 0.75,
+    "stress_action_q": 0.90,
     # crosswind (kt), computed relative to runway heading
     "crosswind_watch_kt": 18.0,
     "crosswind_action_kt": 25.0,
     "crosswind_unknown_dir_kt": 25.0,   # upper-bound threshold when wind direction is unknown
     # observed weather
     "wx_lookback_h": 3,
-    "convective_groups": ["thunderstorm"],
+    "convective_groups": ["storm"],  # pipeline name for thunderstorm/lightning/hail (coco 23-27)
     "winter_groups": ["freezing", "snow"],
     "precip_watch_mm": 5.0,             # total precipitation in lookback window
     "precip_heavy_mm_h": 2.0,           # per-hour, used for failure explanations

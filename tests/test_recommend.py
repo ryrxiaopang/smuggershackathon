@@ -14,7 +14,7 @@ H = pd.Timedelta(hours=1)
 def _blocks(pred, issue=NOW):
     return pd.DataFrame({"airport": ["ATL"], "block_start_utc": [NOW + 3 * H], "block_end_utc": [NOW + 6 * H],
                          "horizon_h": [3], "issue_time_utc": [issue], "stress_rate_pred": [pred],
-                         "hist_p50": [0.10], "hist_p80": [0.20], "hist_p90": [0.30]})
+                         "hist_p50": [0.10], "hist_watch": [0.20], "hist_action": [0.30]})
 
 
 def _wx(gxw, known, at):
@@ -54,3 +54,8 @@ def test_flight_share():
     rec = R.rule_flight_share(fl, NOW, 6)
     assert rec.level == "ACTION" and "buffers" in rec.action
     assert R.rule_flight_share(fl.head(2), NOW, 6).level == "NORMAL"   # below min_flights
+
+def test_storm_group_from_pipeline_triggers_watch():
+    # the pipeline writes 'storm' (config.COCO_GROUP); the rule must use the same name
+    w = _wx(5, True, NOW - H).assign(wx_group="storm")
+    assert R.rule_weather_obs(w, NOW).level == "WATCH"

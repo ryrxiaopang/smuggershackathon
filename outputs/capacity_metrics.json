@@ -1,0 +1,340 @@
+{
+  "target": "capacity-stress proxy (share of flights with ATC/airport-capacity or weather delay >=15 min or cancelled)",
+  "block_h": 6,
+  "n_blocks_before_filter": 5990,
+  "n_blocks_after_filter": 4628,
+  "n_dropped_lt3": 1362,
+  "target_std_test": 0.20120547603515332,
+  "overall": {
+    "n": 3147,
+    "model_rmse": 0.19709351358967517,
+    "model_mae": 0.13444133036718423,
+    "persist_rmse": 0.26816268089565937,
+    "persist_mae": 0.16840757660586067,
+    "hist_rmse": 0.20029860376646322,
+    "hist_mae": 0.139775938359123
+  },
+  "by_airport": {
+    "ATL": {
+      "n": 1617,
+      "model_rmse": 0.1784715800270355,
+      "model_mae": 0.11677220696686529,
+      "persist_rmse": 0.24952879982019913,
+      "persist_mae": 0.15094879352764326,
+      "hist_rmse": 0.18276850800423133,
+      "hist_mae": 0.12072248651521485
+    },
+    "DFW": {
+      "n": 1530,
+      "model_rmse": 0.21502856797020053,
+      "model_mae": 0.1531151686275213,
+      "persist_rmse": 0.28654206872973165,
+      "persist_mae": 0.18685911401597677,
+      "hist_rmse": 0.21729376132013112,
+      "hist_mae": 0.15991282177846908
+    }
+  },
+  "by_horizon": {
+    "3": {
+      "n": 1049,
+      "model_rmse": 0.1960041371045309,
+      "model_mae": 0.13419499320703174,
+      "persist_rmse": 0.2666264376544189,
+      "persist_mae": 0.16717219863073055,
+      "hist_rmse": 0.2002986037664632,
+      "hist_mae": 0.139775938359123
+    },
+    "6": {
+      "n": 1049,
+      "model_rmse": 0.19605792906378391,
+      "model_mae": 0.13324447856446775,
+      "persist_rmse": 0.2673056230524377,
+      "persist_mae": 0.16788035605957435,
+      "hist_rmse": 0.2002986037664632,
+      "hist_mae": 0.139775938359123
+    },
+    "12": {
+      "n": 1049,
+      "model_rmse": 0.1992014708442157,
+      "model_mae": 0.13588451933005316,
+      "persist_rmse": 0.27053967713387994,
+      "persist_mae": 0.1701701751272771,
+      "hist_rmse": 0.2002986037664632,
+      "hist_mae": 0.139775938359123
+    }
+  },
+  "by_airport_horizon": {
+    "ATL_h3": {
+      "n": 539,
+      "model_rmse": 0.1774294465343724,
+      "model_mae": 0.11672191990981147,
+      "persist_rmse": 0.2493483982286375,
+      "persist_mae": 0.1505855667729508,
+      "hist_rmse": 0.18276850800423133,
+      "hist_mae": 0.12072248651521485
+    },
+    "ATL_h6": {
+      "n": 539,
+      "model_rmse": 0.17691707418653987,
+      "model_mae": 0.11514546361581829,
+      "persist_rmse": 0.2494243105850172,
+      "persist_mae": 0.15085060785431842,
+      "hist_rmse": 0.18276850800423133,
+      "hist_mae": 0.12072248651521485
+    },
+    "ATL_h12": {
+      "n": 539,
+      "model_rmse": 0.18103992652401363,
+      "model_mae": 0.11844923737496611,
+      "persist_rmse": 0.24981344120989313,
+      "persist_mae": 0.1514102059556605,
+      "hist_rmse": 0.18276850800423133,
+      "hist_mae": 0.12072248651521485
+    },
+    "DFW_h3": {
+      "n": 510,
+      "model_rmse": 0.2138888929468973,
+      "model_mae": 0.15266163341723119,
+      "persist_rmse": 0.2837457032169511,
+      "persist_mae": 0.18470199190787423,
+      "hist_rmse": 0.2172937613201311,
+      "hist_mae": 0.15991282177846908
+    },
+    "DFW_h6": {
+      "n": 510,
+      "model_rmse": 0.21443814616613857,
+      "model_mae": 0.1523726531866679,
+      "persist_rmse": 0.2849868531126011,
+      "persist_mae": 0.18587846249610954,
+      "hist_rmse": 0.2172937613201311,
+      "hist_mae": 0.15991282177846908
+    },
+    "DFW_h12": {
+      "n": 510,
+      "model_rmse": 0.21674795978907382,
+      "model_mae": 0.15431121927866476,
+      "persist_rmse": 0.29084349900700457,
+      "persist_mae": 0.18999688764394645,
+      "hist_rmse": 0.2172937613201311,
+      "hist_mae": 0.15991282177846908
+    }
+  },
+  "generalisation": {
+    "ATL->DFW": {
+      "n": 1530,
+      "rmse": 0.2204904502036763,
+      "mae": 0.14668301584442733
+    },
+    "DFW->ATL": {
+      "n": 1617,
+      "rmse": 0.18305731966311445,
+      "mae": 0.12636066840504745
+    }
+  },
+  "top_importance_gain": [
+    {
+      "feature": "pres_hpa",
+      "importance_gain": 128.09520152956247
+    },
+    {
+      "feature": "temp_c",
+      "importance_gain": 102.52288186177611
+    },
+    {
+      "feature": "prev_block_stress",
+      "importance_gain": 91.4263618402183
+    },
+    {
+      "feature": "month",
+      "importance_gain": 64.15506180003285
+    },
+    {
+      "feature": "dow",
+      "importance_gain": 63.76282995194197
+    },
+    {
+      "feature": "wspd_kt_mean12h",
+      "importance_gain": 62.7894778996706
+    },
+    {
+      "feature": "wdir_deg",
+      "importance_gain": 59.49004082009196
+    },
+    {
+      "feature": "crosswind_kt_mean12h",
+      "importance_gain": 52.58335045725107
+    },
+    {
+      "feature": "crosswind_kt",
+      "importance_gain": 43.49032158404589
+    },
+    {
+      "feature": "wspd_kt_mean6h",
+      "importance_gain": 39.624843407422304
+    }
+  ],
+  "failure_cases": [
+    {
+      "case_id": 1,
+      "airport": "ATL",
+      "issued_utc": "2025-01-10T05:00:00",
+      "block_start_local": "2025-01-10T12:00:00",
+      "horizon_h": 12,
+      "y_true": 1.0,
+      "y_pred": 0.0038785331391278273,
+      "note": "model under-called stress \u2014 weather at issue time looked benign but 8 bad-wx hours arrived between T and block start"
+    },
+    {
+      "case_id": 2,
+      "airport": "DFW",
+      "issued_utc": "2025-02-18T21:00:00",
+      "block_start_local": "2025-02-18T18:00:00",
+      "horizon_h": 3,
+      "y_true": 1.0,
+      "y_pred": 0.0441518151996509,
+      "note": "model under-called stress \u2014 weather features at T didn't flag what the block saw (small block, lucky run of flights avoided bad wx)"
+    }
+  ],
+  "block_size_comparison": {
+    "block_h_6_overall_rmse": 0.19709351358967517,
+    "block_h_3_overall_rmse": 0.19748080482842456,
+    "block_h_6_target_std": 0.20120547603515332,
+    "block_h_3_target_std": 0.20419423564606548,
+    "less_noisy_block_h": 6,
+    "comment": "6h blocks pool more flights per block, so the stress_rate target is less noisy; 3h blocks are closer to real-time but give higher variance and are harder to beat the persistence baseline on."
+  },
+  "secondary_block_h_3": {
+    "target": "capacity-stress proxy (share of flights with ATC/airport-capacity or weather delay >=15 min or cancelled)",
+    "block_h": 3,
+    "n_blocks_before_filter": 10428,
+    "n_blocks_after_filter": 4312,
+    "n_dropped_lt3": 6116,
+    "target_std_test": 0.20419423564606548,
+    "overall": {
+      "n": 2931,
+      "model_rmse": 0.19748080482842456,
+      "model_mae": 0.13751273556395785,
+      "persist_rmse": 0.270645702413511,
+      "persist_mae": 0.15892471283975887,
+      "hist_rmse": 0.20409081236520143,
+      "hist_mae": 0.14168130399026346
+    },
+    "by_airport": {
+      "ATL": {
+        "n": 1569,
+        "model_rmse": 0.18545398426146473,
+        "model_mae": 0.12338258765488411,
+        "persist_rmse": 0.246659158076505,
+        "persist_mae": 0.13971718919137657,
+        "hist_rmse": 0.18924540607458049,
+        "hist_mae": 0.12331944741470165
+      },
+      "DFW": {
+        "n": 1362,
+        "model_rmse": 0.2104854134958491,
+        "model_mae": 0.1537904169658203,
+        "persist_rmse": 0.29587717665456786,
+        "persist_mae": 0.18105144162412884,
+        "hist_rmse": 0.2199539875453348,
+        "hist_mae": 0.16283383920836664
+      }
+    },
+    "by_horizon": {
+      "3": {
+        "n": 977,
+        "model_rmse": 0.19541620881006536,
+        "model_mae": 0.1361290734866864,
+        "persist_rmse": 0.2581685578169538,
+        "persist_mae": 0.14960561160663513,
+        "hist_rmse": 0.20409081236520146,
+        "hist_mae": 0.14168130399026346
+      },
+      "6": {
+        "n": 977,
+        "model_rmse": 0.19699135972228962,
+        "model_mae": 0.1369887092246264,
+        "persist_rmse": 0.2686905875940118,
+        "persist_mae": 0.15718997254309433,
+        "hist_rmse": 0.20409081236520146,
+        "hist_mae": 0.14168130399026346
+      },
+      "12": {
+        "n": 977,
+        "model_rmse": 0.2000072857575728,
+        "model_mae": 0.13942042398056076,
+        "persist_rmse": 0.28443215816395834,
+        "persist_mae": 0.16997855436954723,
+        "hist_rmse": 0.20409081236520146,
+        "hist_mae": 0.14168130399026346
+      }
+    },
+    "by_airport_horizon": {
+      "ATL_h3": {
+        "n": 523,
+        "model_rmse": 0.18459940363582875,
+        "model_mae": 0.12229854431431667,
+        "persist_rmse": 0.2317580525289295,
+        "persist_mae": 0.1295873926371058,
+        "hist_rmse": 0.18924540607458049,
+        "hist_mae": 0.12331944741470162
+      },
+      "ATL_h6": {
+        "n": 523,
+        "model_rmse": 0.1846582326148228,
+        "model_mae": 0.12255836694371094,
+        "persist_rmse": 0.24517720610291724,
+        "persist_mae": 0.13948526510668002,
+        "hist_rmse": 0.18924540607458049,
+        "hist_mae": 0.12331944741470162
+      },
+      "ATL_h12": {
+        "n": 523,
+        "model_rmse": 0.18709339416510995,
+        "model_mae": 0.12529085170662474,
+        "persist_rmse": 0.2621041081032429,
+        "persist_mae": 0.15007890983034386,
+        "hist_rmse": 0.18924540607458049,
+        "hist_mae": 0.12331944741470162
+      },
+      "DFW_h3": {
+        "n": 454,
+        "model_rmse": 0.20717813932011592,
+        "model_mae": 0.15206159938349112,
+        "persist_rmse": 0.28558141640089263,
+        "persist_mae": 0.17266624711558634,
+        "hist_rmse": 0.2199539875453348,
+        "hist_mae": 0.16283383920836664
+      },
+      "DFW_h6": {
+        "n": 454,
+        "model_rmse": 0.21030430238651823,
+        "model_mae": 0.15361220925308178,
+        "persist_rmse": 0.29345147704156604,
+        "persist_mae": 0.17758548353262008,
+        "hist_rmse": 0.2199539875453348,
+        "hist_mae": 0.16283383920836664
+      },
+      "DFW_h12": {
+        "n": 454,
+        "model_rmse": 0.2139197206176426,
+        "model_mae": 0.15569744226088789,
+        "persist_rmse": 0.30815482508605685,
+        "persist_mae": 0.19290259422418013,
+        "hist_rmse": 0.2199539875453348,
+        "hist_mae": 0.16283383920836664
+      }
+    },
+    "generalisation": {
+      "ATL->DFW": {
+        "n": 1362,
+        "rmse": 0.22383171618583933,
+        "mae": 0.14676376020604104
+      },
+      "DFW->ATL": {
+        "n": 1569,
+        "rmse": 0.18865168098231924,
+        "mae": 0.13555333071309644
+      }
+    }
+  }
+}

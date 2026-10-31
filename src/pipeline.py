@@ -10,8 +10,10 @@ Outputs (see README "shared file contract"):
 
 Works for any airport in the CSV, given as FAA (ORD) or ICAO (KORD) code, with no manual steps:
   - time zone + runway heading: config.py, else looked up from public data (src/airports.py)
-  - wind direction: data/external/iem_wind_*.csv; airports not covered are downloaded from IEM
-    (src/fetch_wind.py). Without direction, crosswind is an upper bound (= full wind speed).
+  - weather timeline: the organiser's hourly file data/external/challenge5_hourly_weather_*.csv (every
+    UTC hour, with wind direction) for the airports it covers; otherwise built from the flight CSV
+  - wind direction: the hourly file, else data/external/iem_wind_*.csv; airports not covered are downloaded
+    from IEM (src/fetch_wind.py). Without direction, crosswind is an upper bound (= full wind speed).
 Use --offline to skip all downloads.
 """
 import argparse
@@ -171,15 +173,67 @@ def load_wind(airports):
     w = w.drop_duplicates(["station", "obs_utc"], keep="last")
     # METAR direction 0 is only used for calm wind -> direction unknown
     w["wdir_deg"] = w["drct"].where(w["drct"] > 0)
+    w["iem_gust_kt"] = w["gust"].where(w["gust"] > 0)
     w = w.rename(columns={"station": "airport", "obs_utc": "wx_obs_utc", "sknt": "iem_sknt"})
-    return w[["airport", "wx_obs_utc", "wdir_deg", "iem_sknt"]]
+    return w[["airport", "wx_obs_utc", "wdir_deg", "iem_sknt", "iem_gust_kt"]]
 
 
-def add_wind(fs, wind):
+HOURLY_GLOB = "challenge5_hourly_weather_*.csv"
+
+
+def load_hourly(airports, wind):
+    """Organiser hourly weather: one row per airport per UTC hour, with wind direction (no gusts).
+
+    A row stamped time_utc = T holds weather observed DURING hour T: it matches the METAR issued at
+    ~T:52 (vs IEM: wind within 1 kt 74% at T+1 vs 58% at T; direction within 10 deg 87% vs 74%).
+    So it is relabelled obs_utc = T + 1h, the rounded-METAR convention used everywhere else here.
+    Keeping T would hand the models up to an hour of future weather."""
+    files = sorted(glob.glob(str(ROOT / "data" / "external" / HOURLY_GLOB)))
+    if not files:
+        return None
+    h = pd.concat([pd.read_csv(f) for f in files], ignore_index=True)
+    h = h[h["airport"].isin(airports)].copy()
+    if h.empty:
+        return None
+    tl = pd.DataFrame({
+        "airport": h["airport"].values,
+        "obs_utc": (pd.to_datetime(h["time_utc"]) + pd.Timedelta(hours=1)).astype(NS).values,
+        "temp_c": h["temp_c"].values,
+        "prcp_mm": h["precip_mm"].values,
+        "wspd_kt": (h["wind_speed_kmh"] / config.KMH_PER_KT).round(1).values,
+        "wpgt_kt": (h["wind_gust_kmh"].where(h["wind_gust_kmh"] > 0) / config.KMH_PER_KT).round(1).values,
+        "pres_hpa": h["pressure_hpa"].values,
+        "snow_mm": 0.0,  # not in the hourly file; was always 0 at ATL/DFW in the flight CSV
+        "coco": h["condition_code"].where(h["condition_code"] > 0).values,
+        "wdir_deg": h["wind_dir_deg"].where(h["wind_dir_deg"] > 0).values,  # 0 = calm/variable
+    }).drop_duplicates(["airport", "obs_utc"], keep="last")
+    tl["wx_group"] = tl["coco"].map(config.COCO_GROUP).fillna("unknown")
+    if wind is not None:  # the hourly file has no gusts; take them from the same METARs via IEM
+        g = wind.rename(columns={"wx_obs_utc": "obs_utc"})[["airport", "obs_utc", "iem_gust_kt", "wdir_deg"]]
+        tl = tl.merge(g.rename(columns={"wdir_deg": "iem_wdir"}), on=["airport", "obs_utc"], how="left")
+        tl["wpgt_kt"] = tl["wpgt_kt"].fillna(tl["iem_gust_kt"])
+        tl["wdir_deg"] = tl["wdir_deg"].fillna(tl["iem_wdir"])
+        tl = tl.drop(columns=["iem_gust_kt", "iem_wdir"])
+    heading = tl["airport"].map(config.RUNWAY_HEADING).fillna(0)
+    w = wind_components(tl["wdir_deg"], tl["wspd_kt"], heading)
+    g = wind_components(tl["wdir_deg"], tl["wpgt_kt"], heading)
+    tl["wind_dir_known"] = w["wind_dir_known"]
+    tl["headwind_kt"], tl["tailwind_kt"], tl["crosswind_kt"] = w["headwind"], w["tailwind"], w["crosswind"]
+    tl["gust_crosswind_kt"] = g["crosswind"]
+    print(f"Hourly weather file: {len(tl):,} airport-hours for {sorted(tl['airport'].unique())}")
+    return tl.sort_values(["airport", "obs_utc"]).reset_index(drop=True)
+
+
+def add_wind(fs, wind, hourly=None):
     if wind is not None:
         fs = fs.merge(wind[["airport", "wx_obs_utc", "wdir_deg"]], on=["airport", "wx_obs_utc"], how="left")
     else:
         fs["wdir_deg"] = np.nan
+    if hourly is not None:  # organiser direction first, IEM where it has none
+        hd = hourly[["airport", "obs_utc", "wdir_deg"]].rename(columns={"obs_utc": "wx_obs_utc", "wdir_deg": "h_wdir"})
+        fs = fs.merge(hd, on=["airport", "wx_obs_utc"], how="left")
+        fs["wdir_deg"] = fs["h_wdir"].combine_first(fs["wdir_deg"])
+        fs = fs.drop(columns="h_wdir")
     heading = fs["airport"].map(config.RUNWAY_HEADING)
     if heading.isna().any():
         print(f"! No runway heading for {sorted(fs.loc[heading.isna(), 'airport'].unique())}; "
@@ -198,11 +252,14 @@ TIMELINE_COLS = ["temp_c", "prcp_mm", "wspd_kt", "wpgt_kt", "pres_hpa", "snow_mm
                  "wdir_deg", "wind_dir_known", "headwind_kt", "tailwind_kt", "crosswind_kt", "gust_crosswind_kt"]
 
 
-def build_timeline(fs):
+def build_timeline(fs, hourly=None):
+    """Hourly organiser file where it covers the airport; otherwise the deduplicated flight-row weather."""
     tl = (fs.sort_values(["airport", "wx_obs_utc"])
             .drop_duplicates(["airport", "wx_obs_utc"])[["airport", "wx_obs_utc"] + TIMELINE_COLS]
-            .rename(columns={"wx_obs_utc": "obs_utc"}).reset_index(drop=True))
-    return tl
+            .rename(columns={"wx_obs_utc": "obs_utc"}))
+    if hourly is not None:
+        tl = pd.concat([tl[~tl["airport"].isin(hourly["airport"])], hourly[["airport", "obs_utc"] + TIMELINE_COLS]])
+    return tl.sort_values(["airport", "obs_utc"]).reset_index(drop=True)
 
 
 def check_alignment(tl, wind):
@@ -212,7 +269,7 @@ def check_alignment(tl, wind):
     if wind is None:
         return
     w = wind.set_index(["airport", "wx_obs_utc"])["iem_sknt"]
-    print("time-zone rule check, mean |CSV wind - IEM wind| kt (relabelled hour / -1 h / +1 h):")
+    print("time-zone rule check, mean |timeline wind - IEM wind| kt (relabelled hour / -1 h / +1 h):")
     for ap, g in tl.groupby("airport"):
         err = {}
         for sh in (0, -1, 1):
@@ -240,6 +297,12 @@ def report(fs, tl):
     print("per 100 flights:\n" + rates.round(1).to_string())
     lag = (fs["sched_utc"] - fs["wx_obs_utc"]).dt.total_seconds() / 3600
     print(f"provided weather is observed {lag.median():.1f} h (median) before the scheduled time")
+    print(f"timeline: wind direction known {tl['wind_dir_known'].mean() * 100:.1f}%, gust reported "
+          f"{tl['wpgt_kt'].notna().mean() * 100:.1f}% of airport-hours")
+    m = fs[["airport", "wx_obs_utc", "temp_c", "wspd_kt"]].merge(
+        tl[["airport", "obs_utc", "temp_c", "wspd_kt"]], left_on=["airport", "wx_obs_utc"], right_on=["airport", "obs_utc"])
+    print(f"flight-CSV weather vs timeline at the same hour: |temp| {(m['temp_c_x'] - m['temp_c_y']).abs().mean():.2f} C, "
+          f"|wind| {(m['wspd_kt_x'] - m['wspd_kt_y']).abs().mean():.2f} kt (0 when the timeline is built from the flight CSV)")
 
 
 def main():
@@ -262,16 +325,17 @@ def main():
     dates = pd.to_datetime(df["FL_DATE"])
     ensure_wind(airports, dates.min() - pd.Timedelta(days=1), dates.max() + pd.Timedelta(days=2), a.offline)
     wind = load_wind(airports)
+    hourly = load_hourly(airports, wind)
 
     fs = explode_sides(df, airports)
     fs = add_times(fs)
     fs = add_labels(fs)
     fs = add_weather(fs)
-    fs = add_wind(fs, wind)
+    fs = add_wind(fs, wind, hourly)
     for c in ["sched_local", "sched_utc", "date_local", "wx_obs_utc"]:
         fs[c] = pd.to_datetime(fs[c]).astype(NS)
     fs = fs.sort_values(["sched_utc", "flight_id", "side"]).reset_index(drop=True)
-    tl = build_timeline(fs)
+    tl = build_timeline(fs, hourly)
 
     out = Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)

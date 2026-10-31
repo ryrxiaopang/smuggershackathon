@@ -809,7 +809,7 @@ with tab_ev:
     st.markdown(
         "- The congestion forecast clearly beats the naive guess and only just beats the historical average. "
         "It helps most on unusual days (storms, winter weather), which is when it matters.\n"
-        "- The flight-delay model's riskiest-ranked flights run late about 2.5× as often as the average flight, "
+        "- The flight-delay model's riskiest-ranked flights run late about twice as often as the average flight, "
         "and the weather adds real value on top of the timetable.\n"
         "- Warnings get less accurate the further ahead you look (3h → 12h). Every number below shows this trade-off.\n"
         "- It does fail: see the failure cases at the bottom, each with a one-line reason.")
@@ -919,8 +919,12 @@ with tab_lim:
 - **Weather time-zone fix.** In the provided CSV, weather attached to a flight at *local* hour H is really the observation at
   *UTC* hour H (verified against raw METARs, temp error 0.03 °C). We relabel each observation to its true `obs_utc`
   (4–6 h before the flight).
-- **Wind direction.** The CSV has none. It comes from public METARs (Iowa Environmental Mesonet ASOS archive).
-  Crosswind/tailwind are computed against the runway heading (ATL 80°, DFW 180°).
+- **Hourly weather.** The weather timeline uses the organisers' hourly file (every UTC hour, with wind direction) for
+  ATL and DFW: 24 readings a day instead of the ~9 attached to sampled flights. A row stamped hour T holds weather
+  observed *during* hour T (it matches the METAR at ~T:52), so we treat it as known only from T+1h; using T would leak
+  up to an hour of future weather into the forecasts.
+- **Wind direction.** From the hourly file; where it has none (calm/variable), from public METARs (Iowa Environmental
+  Mesonet ASOS archive), which also supply gusts. Crosswind/tailwind are computed against the runway heading (ATL 80°, DFW 180°).
   When direction is missing, **crosswind = full wind speed (upper bound)**, flagged and drawn as ▵. The rule then says *verify direction*.
 - **Observations, not forecasts.** Inputs are observations available at issue time, so weather that develops later is invisible.
   This is our main failure mode. Next: TAF/convective forecasts.

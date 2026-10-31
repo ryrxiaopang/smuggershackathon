@@ -37,7 +37,7 @@ def coco_to_group(c):
 RULES = {
     # capacity stress: compare the prediction with how disrupted this airport's 6h blocks really were in
     # the TRAIN period (realised share of stressed flights, blocks with >=3 flights). On the 2025 test set
-    # (h=6) this flags ACTION on 1.9% of blocks (actual 39/100 disrupted vs 10/100 when NORMAL).
+    # (h=6) this flags ACTION on 2.2% of blocks (actual 42/100 disrupted vs 10/100 when NORMAL).
     "stress_watch_col": "hist_watch",
     "stress_action_col": "hist_action",
     "stress_watch_q": 0.75,

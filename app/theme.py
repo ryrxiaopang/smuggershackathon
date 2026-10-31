@@ -224,7 +224,7 @@ LANDING_TEXT = """
     <div class="stats">__STATS__</div>"""
 
 LANDING_CSS = """
-.hero{height:470px;padding:44px 52px;border-radius:28px}
+.hero{height:500px;padding:44px 52px;border-radius:28px}
 .text{max-width:64%}
 h1{font-size:54px;margin:10px 0 4px}
 .h2{font-family:'Space Grotesk',Inter,sans-serif;font-size:24px;color:#a5f3fc;font-weight:500;margin-bottom:14px}
@@ -238,7 +238,8 @@ h1{font-size:54px;margin:10px 0 4px}
   background:linear-gradient(90deg,#a5f3fc,#c4b5fd,#f9a8d4);-webkit-background-clip:text;background-clip:text;color:transparent}
 .stat span{font-size:12px;color:#cbd5e1}
 @media (max-width:1150px){.scene{transform:scale(1.15);margin-right:20px}h1{font-size:42px}}
-@media (max-width:760px){.hero{height:470px;padding:28px}h1{font-size:34px}.h2{font-size:18px}.text{max-width:100%}.sub{display:block;font-size:13px}.scene{display:block;position:absolute;right:-70px;bottom:-40px;transform:scale(.85);opacity:.75;margin:0}}
+@media (max-width:980px){.hero{padding:34px 36px}.scene{transform:scale(.95);margin-right:-10px}.text{max-width:62%}h1{font-size:34px}.h2{font-size:17px;margin-bottom:10px}.sub{font-size:13px;margin-bottom:14px}.stats{gap:8px}.stat{padding:8px 12px;min-width:0}.stat b{font-size:21px}.stat span{font-size:11px}}
+@media (max-width:760px){.hero{height:500px;padding:28px}h1{font-size:34px}.h2{font-size:18px}.text{max-width:100%}.sub{display:block;font-size:13px}.scene{display:block;position:absolute;right:-70px;bottom:-40px;transform:scale(.85);opacity:.75;margin:0}}
 """
 
 COUNT_UP = """<script>
@@ -283,7 +284,7 @@ def landing_hero(stats):
     page = (HERO.replace("__TEXT__", LANDING_TEXT.replace("__STATS__", cards)).replace("__EXTRA_CSS__", LANDING_CSS)
             .replace("__SCRIPT__", COUNT_UP).replace("__FONTS__", FONTS).replace("__STARS__", _stars(70))
             .replace("__PLANE__", _PLANE))
-    components.html(page, height=482)
+    components.html(page, height=512)
 
 
 def feature_cards(cards):

@@ -1,16 +1,23 @@
 """Shared configuration. Import from here; do not hard-code airports, paths or dates elsewhere."""
+import csv
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 
-# --- Airports (extend these dicts to support any airport code) ---
+# --- Airports ---
+# Default study airports. The pipeline accepts any code in the CSV (FAA or ICAO, e.g. ORD / KORD):
+# src/airports.py looks up time zone + runway heading from public data and caches them in
+# data/external/airport_meta.csv, which is merged into the dicts below at import.
+# Values written here always win over the lookup.
 AIRPORTS = ["ATL", "DFW"]
 RUNWAY_HEADING = {"ATL": 80, "DFW": 180}  # degrees, per organiser assumption
 AIRPORT_TZ = {"ATL": "America/New_York", "DFW": "America/Chicago"}
+ORGANISER_HEADING = dict(RUNWAY_HEADING)
 
 # --- Paths ---
 RAW_CSV = ROOT / "data" / "raw" / "Flight_Data_With_Weather_Final.csv"
 WIND_CSV = ROOT / "data" / "external" / "iem_wind_ATL_DFW.csv"
+AIRPORT_META = ROOT / "data" / "external" / "airport_meta.csv"
 PROCESSED = ROOT / "data" / "processed"
 FLIGHT_SIDES = PROCESSED / "flight_sides.parquet"
 WEATHER_TIMELINE = PROCESSED / "weather_timeline.parquet"
@@ -40,3 +47,18 @@ COCO_GROUP = {
     14: "snow", 15: "snow", 16: "snow", 17: "rain", 18: "rain", 19: "freezing", 20: "freezing",
     21: "snow", 22: "snow", 23: "storm", 24: "storm", 25: "storm", 26: "storm", 27: "storm",
 }
+
+
+def _merge_airport_meta():
+    """Add looked-up airports (src/airports.py cache) without overriding the values above."""
+    if not AIRPORT_META.exists():
+        return
+    with open(AIRPORT_META, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if r["tz"]:
+                AIRPORT_TZ.setdefault(r["code"], r["tz"])
+            if r["runway_heading"]:
+                RUNWAY_HEADING.setdefault(r["code"], int(float(r["runway_heading"])))
+
+
+_merge_airport_meta()

@@ -1,0 +1,7 @@
+code,icao,name,tz,runway_heading,heading_source,iem_id
+DEN,KDEN,Denver International Airport,America/Denver,180,ourairports,DEN
+JFK,KJFK,John F. Kennedy International Airport,America/New_York,121,ourairports,JFK
+ORD,KORD,Chicago O'Hare International Airport,America/Chicago,90,ourairports,ORD
+OSH,KOSH,Wittman Regional Airport,America/Chicago,180,ourairports,OSH
+PHX,KPHX,Phoenix Sky Harbor International Airport,America/Phoenix,90,ourairports,PHX
+SEA,KSEA,Seattle–Tacoma International Airport,America/Los_Angeles,180,ourairports,SEA

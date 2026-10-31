@@ -523,19 +523,97 @@ syn = [n for n, df in (("capacity_preds", cap_raw), ("flight_risk_preds", fl_raw
        if "is_synthetic" in df.columns and bool(df["is_synthetic"].any())]
 syn += [n for n, m in metrics.items() if m.get("is_synthetic")]
 
+# ---------------- landing page ----------------
+DEMO = {"ap": "ATL", "day": dt.date(2025, 1, 21), "time": dt.time(19, 0), "horizon": 12}
+NO_PICK = "(pick a date below instead)"
+
+
+def landing_numbers():
+    """Headline numbers for the landing page, computed from the real output files (2025 test period)."""
+    out = {"flights": int(sides["flight_id"].nunique()) if sides is not None else len(fl_all), "wx": len(wx_all)}
+    e = fl_all[fl_all["horizon_h"] == 3].dropna(subset=["actual_delay45"]) if "actual_delay45" in fl_all.columns else fl_all.iloc[:0]
+    if len(e):
+        top = e.nlargest(max(1, len(e) // 10), "p_delay45")["actual_delay45"].mean()
+        out["top"], out["lift"] = top, top / e["actual_delay45"].mean()
+    t = cap_all[cap_all["horizon_h"] == 6].dropna(subset=["stress_rate_actual"]) if "stress_rate_actual" in cap_all.columns else cap_all.iloc[:0]
+    if len(t):
+        act, wat = t["stress_rate_pred"] > t["hist_action"], t["stress_rate_pred"] > t["hist_watch"]
+        out["act_y"], out["norm_y"] = t.loc[act, "stress_rate_actual"].mean(), t.loc[~wat, "stress_rate_actual"].mean()
+    return out
+
+
+def go_to(view, preset=None):
+    st.session_state["view"] = view
+    if preset:
+        st.session_state["preset"] = preset
+    st.rerun()
+
+
+def render_landing():
+    theme.landing_mode_css()
+    n = landing_numbers()
+    theme.landing_hero([(n["flights"], 0, "", "flights analysed"), (n["wx"], 0, "", "hourly weather reports"),
+                        (12, 0, " h", "of warning"),
+                        (round(n.get("lift", 0), 1), 1, "×", "better at spotting late flights")])
+    _, b1, b2, _ = st.columns([1, 3, 3, 1])
+    if b1.button("✈  Open the live dashboard", type="primary", key="cta_open"):
+        go_to("dashboard")
+    if b2.button("▶  Demo: ATL winter storm", key="cta_demo"):
+        go_to("dashboard", DEMO)
+    st.markdown("### What it does")
+    act = (f"When it says ACTION, {n['act_y']*100:.0f} of 100 flights were disrupted (normal: {n['norm_y']*100:.0f})"
+           if "act_y" in n else "Alerts measured on 2025 data")
+    top = f"Riskiest 10%: {n['top']:.0%} really late, {n['lift']:.1f}× the average" if "top" in n else "Ranked by risk"
+    theme.feature_cards([
+        ("🛬", "Airport congestion forecast", "How many flights will be disrupted in each 6-hour block at ATL or DFW, "
+               "3, 6 or 12 hours ahead, against what is normal for that airport.", act),
+        ("⏱", "Flights at risk", "The chance each flight is more than 45 minutes late, worked out hours before it "
+              "departs or lands, with the top reasons in plain words.", top),
+        ("🧭", "Advice you can check", "Four fixed rules turn the forecasts into NORMAL, WATCH or ACTION. Every alert "
+              "lists the timestamped weather reports and values behind it.", "No AI-written numbers · the human decides"),
+    ])
+    st.markdown("### How it works")
+    theme.how_it_works([
+        ("🌦", "Weather + flights", f"{n['wx']:,} hourly airport weather reports and {n['flights']:,} sampled flights, 2023–2025."),
+        ("🔒", "No peeking ahead", "Each forecast only uses data from before it was made. Time-stamp errors in the data were found and fixed."),
+        ("🤖", "Machine learning", "LightGBM models forecast block congestion and each flight's >45-minute delay risk."),
+        ("🚦", "Plain advice", "Simple rules turn forecasts into NORMAL / WATCH / ACTION with the evidence attached."),
+    ])
+    _, b3, _ = st.columns([2, 2, 2])
+    if b3.button("Start exploring  →", type="primary", key="cta_bottom"):
+        go_to("dashboard")
+    st.markdown("<div class='landing-foot'>Built by Ry · Emz · Rach · Deph for Autonomous SG 2026. Data: BTS on-time sample, "
+                "organiser hourly weather, IEM METAR archive. Results are on Jan–Jul 2025, which the models never saw in "
+                "training.</div>", unsafe_allow_html=True)
+
+
+if "view" not in st.session_state:
+    st.session_state["view"] = "dashboard" if st.query_params.get("view") == "dashboard" else "landing"
+if st.session_state["view"] == "landing":
+    render_landing()
+    st.stop()
+
 # ---------------- sidebar ----------------
+if st.sidebar.button("← Home", key="back_home"):
+    go_to("landing")
+preset = st.session_state.pop("preset", None)
+if preset:  # demo button on the landing page: pre-fill the sidebar
+    st.session_state.update({"w_ap": preset["ap"], "w_h": preset["horizon"], "w_pick": NO_PICK,
+                             f"day_{preset['ap']}_{NO_PICK}": preset["day"], f"tm_{preset['ap']}": preset["time"]})
 st.sidebar.title("✈ Capacity & Delay-Risk")
 st.sidebar.caption("For an airline ops duty manager or ATC flow coordinator. Pick an airport and a moment in "
                    "2025: the page shows only what was known at that moment, like a live shift.")
 avail = sorted(set(cap_all["airport"]) | set(fl_all["airport"]) | set(wx_all["airport"]))
-ap = st.sidebar.selectbox("Airport", avail, index=avail.index("ATL") if "ATL" in avail else 0)
+ap = st.sidebar.selectbox("Airport", avail, key="w_ap",
+                          **({} if "w_ap" in st.session_state else {"index": avail.index("ATL") if "ATL" in avail else 0}))
 tz = C.AIRPORT_TZ.get(ap, "UTC")
 if ap not in C.AIRPORT_TZ:
     st.sidebar.warning("No time zone configured for this airport — times shown in UTC.")
 cap = cap_all[cap_all["airport"] == ap]
 fl = fl_all[fl_all["airport"] == ap]
 wx = wx_all[wx_all["airport"] == ap]
-horizon = st.sidebar.radio("How far ahead to look (hours)", C.HORIZONS, index=min(1, len(C.HORIZONS) - 1), horizontal=True,
+horizon = st.sidebar.radio("How far ahead to look (hours)", C.HORIZONS, horizontal=True, key="w_h",
+                           **({} if "w_h" in st.session_state else {"index": min(1, len(C.HORIZONS) - 1)}),
                            help="Longer warning = more time to act, but less accurate.")
 
 times = cap["block_start_utc"] if not cap.empty else (fl["sched_utc"] if not fl.empty else wx["obs_utc"])
@@ -547,12 +625,15 @@ if not cap.empty:
     top = (c0.assign(day=c0["block_start_utc"].dt.tz_convert(tz).dt.date)
            .groupby("day")["stress_rate_pred"].max().nlargest(8))
     picks = {f"{d:%a %d %b %Y} · up to {v*100:.0f} of 100 flights disrupted": d for d, v in top.items()}
-pick = st.sidebar.selectbox("Jump to a high-risk day", ["(pick a date below instead)"] + list(picks),
+pick = st.sidebar.selectbox("Jump to a high-risk day", [NO_PICK] + list(picks), key="w_pick",
                             help="Days in the 2025 test period where the forecast was highest.")
 default_day = picks.get(pick, next(iter(picks.values()), dmin))
 default_day = min(max(default_day, dmin), dmax)
-day = st.sidebar.date_input("Date (local)", value=default_day, min_value=dmin, max_value=dmax, key=f"day_{ap}_{pick}")
-tm = st.sidebar.time_input("Time now (local)", value=dt.time(6, 0), step=3600, key=f"tm_{ap}")
+k_day, k_tm = f"day_{ap}_{pick}", f"tm_{ap}"
+day = st.sidebar.date_input("Date (local)", min_value=dmin, max_value=dmax, key=k_day,
+                            **({} if k_day in st.session_state else {"value": default_day}))
+tm = st.sidebar.time_input("Time now (local)", step=3600, key=k_tm,
+                           **({} if k_tm in st.session_state else {"value": dt.time(6, 0)}))
 now_local = pd.Timestamp(dt.datetime.combine(day, tm)).tz_localize(tz, ambiguous=False, nonexistent="shift_forward")
 now = now_local.tz_convert("UTC")
 show_hind = st.sidebar.toggle("Show what actually happened", value=False,

@@ -15,6 +15,7 @@ APP_CSS = """
 @import url('__FONTS__');
 :root { --c1:#6366f1; --c2:#06b6d4; --c3:#ec4899; --glass:rgba(99,102,241,.08); --line:rgba(99,102,241,.28); }
 html, body, [class*="st-"], .stMarkdown, .stCaption { font-family:'Inter', system-ui, sans-serif; }
+[data-testid="stIconMaterial"], .material-symbols-rounded { font-family:'Material Symbols Rounded' !important; }  /* keep icon glyphs */
 h1, h2, h3, h4 { font-family:'Space Grotesk', 'Inter', sans-serif !important; letter-spacing:-.01em; }
 .block-container { padding-top:3.4rem; }
 
@@ -63,6 +64,39 @@ h1, h2, h3, h4 { font-family:'Space Grotesk', 'Inter', sans-serif !important; le
   background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.10) 50%,transparent 70%); background-size:250% 100%; animation:sheen 4.5s ease-in-out infinite; }
 @keyframes slideIn { from { opacity:0; transform:translateX(-14px); } to { opacity:1; transform:none; } }
 @keyframes sheen { 0% { background-position:150% 0; } 60%, 100% { background-position:-100% 0; } }
+
+/* landing: feature cards */
+.feats { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; margin:8px 0 6px; }
+.feat { position:relative; padding:22px 22px 18px; border-radius:22px; border:1px solid var(--line); overflow:hidden;
+  background:linear-gradient(160deg,rgba(99,102,241,.12),rgba(6,182,212,.06) 55%,rgba(236,72,153,.07));
+  transition:transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s, border-color .3s; animation:fadeUp .6s ease both; }
+.feat:nth-child(2) { animation-delay:.1s; } .feat:nth-child(3) { animation-delay:.2s; }
+.feat:hover { transform:translateY(-6px) rotate(-.3deg); box-shadow:0 18px 40px rgba(99,102,241,.28); border-color:rgba(6,182,212,.6); }
+.feat::before { content:""; position:absolute; width:180px; height:180px; right:-60px; top:-60px; border-radius:50%;
+  background:radial-gradient(circle,rgba(6,182,212,.35),transparent 70%); transition:transform .5s; }
+.feat:hover::before { transform:scale(1.4); }
+.feat .ico { font-size:30px; width:54px; height:54px; display:grid; place-items:center; border-radius:16px;
+  background:linear-gradient(135deg,var(--c1),var(--c2)); box-shadow:0 8px 20px rgba(99,102,241,.4); margin-bottom:12px; }
+.feat h4 { margin:0 0 6px; font-size:1.15rem; }
+.feat p { margin:0 0 12px; opacity:.85; font-size:.93rem; line-height:1.45; }
+.feat .kpi { display:inline-block; font-weight:700; font-size:.85rem; padding:5px 12px; border-radius:999px;
+  background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.35); }
+
+/* landing: how it works */
+.flow { display:flex; align-items:stretch; gap:6px; flex-wrap:wrap; margin:6px 0 10px; }
+.step { flex:1 1 170px; position:relative; padding:18px 16px 14px; border-radius:18px; border:1px solid var(--line);
+  background:var(--glass); transition:transform .25s, box-shadow .25s; animation:fadeUp .6s ease both; }
+.step:hover { transform:translateY(-4px); box-shadow:0 12px 26px rgba(6,182,212,.22); }
+.step .num { position:absolute; top:10px; right:12px; font-family:'Space Grotesk'; font-weight:700; font-size:.8rem; opacity:.5; }
+.step .ico { font-size:26px; margin-bottom:6px; }
+.step h5 { margin:0 0 4px; font-size:1rem; }
+.step p { margin:0; font-size:.85rem; opacity:.8; line-height:1.4; }
+.arrow { flex:0 0 26px; display:flex; align-items:center; }
+.arrow span { display:block; width:100%; height:3px; border-radius:2px;
+  background:linear-gradient(90deg,var(--c1),var(--c2),var(--c1)); background-size:200% 100%; animation:flowline 1.6s linear infinite; }
+@keyframes flowline { to { background-position:-200% 0; } }
+@media (max-width:900px) { .arrow { display:none; } }
+.landing-foot { text-align:center; opacity:.65; font-size:.82rem; margin-top:18px; }
 </style>
 """.replace("__FONTS__", FONTS)
 
@@ -153,10 +187,21 @@ svg.orbit ellipse{fill:none;stroke:rgba(165,180,252,.45);stroke-width:1.2;stroke
   75%{transform:scale(1.15);opacity:1}100%{offset-distance:100%;z-index:3;transform:scale(.85);opacity:.85}}
 @media (max-width:980px){.scene{transform:scale(.8);margin-right:-40px}}
 @media (max-width:760px){.scene{display:none}.text{max-width:100%}h1{font-size:24px}.sub{display:none}}
+__EXTRA_CSS__
 </style></head><body>
 <div class="hero">
   __STARS__<div class="shoot"></div>
-  <div class="text">
+  <div class="text">__TEXT__</div>
+  <div class="scene">
+    <div class="tilt b"><svg class="orbit" viewBox="0 0 320 220"><ellipse cx="160" cy="110" rx="110" ry="34"/></svg>
+      <div class="plane">__PLANE__</div></div>
+    <div class="tilt"><svg class="orbit" viewBox="0 0 320 220"><ellipse cx="160" cy="110" rx="140" ry="46"/></svg>
+      <div class="globe"><div class="land"></div><div class="grid"></div><div class="shade"></div><div class="pin"></div></div>
+      <div class="plane">__PLANE__</div></div>
+  </div>
+</div>__SCRIPT__</body></html>"""
+
+DASH_TEXT = """
     <div class="eyebrow">Autonomous SG 2026 · Airbus Challenge #5</div>
     <h1>Airport Capacity &amp; Delay-Risk</h1>
     <div class="sub">Early warning for ops duty managers: congestion and &gt;45-minute delay risk 3–12 hours ahead,
@@ -167,16 +212,45 @@ svg.orbit ellipse{fill:none;stroke:rgba(165,180,252,.45);stroke-width:1.2;stroke
       <span class="chip">🕕 __WHEN__</span>
       <span class="chip">⏱ next __H__ h</span>
       <span class="chip">__PEAK__</span>
-    </div>
-  </div>
-  <div class="scene">
-    <div class="tilt b"><svg class="orbit" viewBox="0 0 320 220"><ellipse cx="160" cy="110" rx="110" ry="34"/></svg>
-      <div class="plane">__PLANE__</div></div>
-    <div class="tilt"><svg class="orbit" viewBox="0 0 320 220"><ellipse cx="160" cy="110" rx="140" ry="46"/></svg>
-      <div class="globe"><div class="land"></div><div class="grid"></div><div class="shade"></div><div class="pin"></div></div>
-      <div class="plane">__PLANE__</div></div>
-  </div>
-</div></body></html>"""
+    </div>"""
+
+LANDING_TEXT = """
+    <div class="eyebrow">Autonomous SG 2026 · Airbus Challenge #5 · Atlanta &amp; Dallas/Fort Worth</div>
+    <h1>See the squeeze coming.</h1>
+    <div class="h2">Airport capacity &amp; delay risk, 3–12 hours ahead.</div>
+    <div class="sub">For airline ops duty managers and ATC flow coordinators. It forecasts how many flights will be
+      disrupted and which ones will run more than 45 minutes late, from weather and flight data,
+      and shows the evidence behind every call. The human decides.</div>
+    <div class="stats">__STATS__</div>"""
+
+LANDING_CSS = """
+.hero{height:470px;padding:44px 52px;border-radius:28px}
+.text{max-width:64%}
+h1{font-size:54px;margin:10px 0 4px}
+.h2{font-family:'Space Grotesk',Inter,sans-serif;font-size:24px;color:#a5f3fc;font-weight:500;margin-bottom:14px}
+.sub{font-size:15px;max-width:600px;margin-bottom:22px}
+.scene{transform:scale(1.6);margin-right:110px}
+.stats{display:flex;gap:14px;flex-wrap:wrap}
+.stat{min-width:96px;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  backdrop-filter:blur(6px);transition:transform .25s,background .25s}
+.stat:hover{transform:translateY(-4px);background:rgba(255,255,255,.14)}
+.stat b{display:block;font-family:'Space Grotesk',sans-serif;font-size:28px;
+  background:linear-gradient(90deg,#a5f3fc,#c4b5fd,#f9a8d4);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat span{font-size:12px;color:#cbd5e1}
+@media (max-width:1150px){.scene{transform:scale(1.15);margin-right:20px}h1{font-size:42px}}
+@media (max-width:760px){.hero{height:470px;padding:28px}h1{font-size:34px}.h2{font-size:18px}.text{max-width:100%}.sub{display:block;font-size:13px}.scene{display:block;position:absolute;right:-70px;bottom:-40px;transform:scale(.85);opacity:.75;margin:0}}
+"""
+
+COUNT_UP = """<script>
+document.querySelectorAll('[data-to]').forEach(function(el){
+  var to=parseFloat(el.dataset.to), dec=parseInt(el.dataset.dec||'0'), suf=el.dataset.suf||'', t0=null, dur=1600;
+  function step(t){ if(!t0) t0=t; var k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
+    el.textContent=(to*e).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec})+suf;
+    if(k<1) requestAnimationFrame(step); }
+  requestAnimationFrame(step);
+  setTimeout(function(){ step(t0 === null ? 0 : t0 + dur); }, dur + 400);  // land on the final value even if frames are throttled
+});
+</script>"""
 
 
 def _stars(n=42):
@@ -194,8 +268,52 @@ def hero(ap, when, horizon, level, meaning, peak, normal):
         peak_txt = "📊 no congestion forecast in this window"
     else:
         peak_txt = f"📊 up to {peak*100:.0f} of 100 flights disrupted (normal ≤ {normal*100:.0f})"
-    page = (HERO.replace("__FONTS__", FONTS).replace("__STARS__", _stars()).replace("__PLANE__", _PLANE)
+    page = (HERO.replace("__TEXT__", DASH_TEXT).replace("__EXTRA_CSS__", "").replace("__SCRIPT__", "")
+            .replace("__FONTS__", FONTS).replace("__STARS__", _stars()).replace("__PLANE__", _PLANE)
             .replace("__LEVEL__", level).replace("__ICON__", LEVEL_ICON[level]).replace("__MEANING__", html.escape(meaning))
             .replace("__AP__", html.escape(ap)).replace("__WHEN__", html.escape(when)).replace("__H__", str(horizon))
             .replace("__PEAK__", html.escape(peak_txt)))
     components.html(page, height=262)
+
+
+def landing_hero(stats):
+    """Big landing version of the hero. stats: list of (number, decimals, suffix, label); numbers count up."""
+    cards = "".join(f"<div class='stat'><b data-to='{v}' data-dec='{d}' data-suf='{html.escape(suf)}'>0</b>"
+                    f"<span>{html.escape(label)}</span></div>" for v, d, suf, label in stats)
+    page = (HERO.replace("__TEXT__", LANDING_TEXT.replace("__STATS__", cards)).replace("__EXTRA_CSS__", LANDING_CSS)
+            .replace("__SCRIPT__", COUNT_UP).replace("__FONTS__", FONTS).replace("__STARS__", _stars(70))
+            .replace("__PLANE__", _PLANE))
+    components.html(page, height=482)
+
+
+def feature_cards(cards):
+    """cards: list of (icon, title, text, stat_line). Rendered as hover cards in the main page."""
+    items = "".join(f"<div class='feat'><div class='ico'>{i}</div><h4>{html.escape(t)}</h4><p>{html.escape(x)}</p>"
+                    f"<div class='kpi'>{html.escape(k)}</div></div>" for i, t, x, k in cards)
+    st.markdown(f"<div class='feats'>{items}</div>", unsafe_allow_html=True)
+
+
+def how_it_works(steps):
+    """steps: list of (icon, title, text), drawn as a flow with animated connectors."""
+    parts = []
+    for n, (i, t, x) in enumerate(steps):
+        if n:
+            parts.append("<div class='arrow'><span></span></div>")
+        parts.append(f"<div class='step'><div class='num'>{n + 1}</div><div class='ico'>{i}</div>"
+                     f"<h5>{html.escape(t)}</h5><p>{html.escape(x)}</p></div>")
+    st.markdown(f"<div class='flow'>{''.join(parts)}</div>", unsafe_allow_html=True)
+
+
+LANDING_ONLY_CSS = """<style>
+[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"] { display:none !important; }
+.block-container { max-width:1240px; padding-top:3rem; }
+div[data-testid="stButton"] button { font-size:1.05rem; padding:.8rem 1.4rem; border-radius:16px; width:100%; }
+div[data-testid="stButton"] button p { font-size:1.05rem; font-weight:700; white-space:normal; }
+[data-testid="stBaseButton-secondary"] { background:transparent !important; border:2px solid #06b6d4 !important; box-shadow:none !important; }
+[data-testid="stBaseButton-secondary"] p { color:#06b6d4 !important; }
+[data-testid="stBaseButton-secondary"]:hover { background:rgba(6,182,212,.12) !important; }
+</style>"""
+
+
+def landing_mode_css():
+    st.markdown(LANDING_ONLY_CSS, unsafe_allow_html=True)

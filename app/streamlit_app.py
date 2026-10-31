@@ -883,19 +883,16 @@ with tab_fl:
         sl = pd.to_datetime(flagged["sched_local"], errors="coerce")
         if sl.isna().any():
             sl = local(flagged["sched_utc"], tz)
-        show = pd.DataFrame({"": np.where(flagged["p_delay45"] >= thr_sel, "⚠", ""),
-                             "scheduled (local)": sl.dt.strftime("%a %d %b %H:%M"),
-                             "dep/arr": flagged["side"].map({"DEP": "departure", "ARR": "arrival"}).fillna(flagged["side"]),
-                             "flight": flagged["flight_label"],
-                             "to / from": flagged["counterpart"].astype(str),
-                             "chance of >45 min delay": flagged["p_delay45"],
-                             "why (top 3 factors)": flagged["top_factors"].map(explain_factors) if "top_factors" in flagged.columns else "",
-                             "forecast made": flagged["horizon_h"].astype(int).astype(str) + "h before"})
-        if show_hind and "actual_delay45" in flagged.columns:
-            show["actually >45 min late?"] = flagged["actual_delay45"].map({1.0: "yes", 0.0: "no"})
-        st.dataframe(show, hide_index=True, width="stretch",
-                     column_config={"chance of >45 min delay": st.column_config.ProgressColumn(
-                         "chance of >45 min delay", min_value=0.0, max_value=1.0, format="percent")})
+        hind = show_hind and "actual_delay45" in flagged.columns
+        why = flagged["top_factors"].map(explain_factors) if "top_factors" in flagged.columns else pd.Series("", index=flagged.index)
+        theme.risk_table([{"flagged": p >= thr_sel, "when": w, "side": {"DEP": "departure", "ARR": "arrival"}.get(sd, sd),
+                           "flight": str(fl_), "other": str(o), "p": float(p), "why": y, "made": f"{int(h_)}h before",
+                           "late": {1.0: "yes", 0.0: "no"}.get(a_) if hind else None}
+                          for p, w, sd, fl_, o, y, h_, a_ in zip(
+                              flagged["p_delay45"], sl.dt.strftime("%a %d %b %H:%M"), flagged["side"], flagged["flight_label"],
+                              flagged["counterpart"], why, flagged["horizon_h"],
+                              flagged["actual_delay45"] if hind else [None] * len(flagged))],
+                         hindsight=hind)
         st.caption("The data is a sample (~6 ATL arrivals a day), not the full schedule. "
                    + ("Flight details come from flight_sides.parquet, matched on (flight_id, side). " if sides_joined else "")
                    + ("Forecast time = scheduled time minus the horizon. " if issue_nominal else ""))

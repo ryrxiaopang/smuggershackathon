@@ -103,6 +103,30 @@ h1, h2, h3, h4 { font-family:'Space Grotesk', 'Inter', sans-serif !important; le
 @media (max-width:900px) { .arrow { display:none; } }
 .landing-foot { text-align:center; opacity:.65; font-size:.82rem; margin-top:18px; }
 
+/* at-risk flights table: flagged rows tinted red with a blinking red warning sign */
+.rk-wrap { overflow-x:auto; border-radius:14px; border:1px solid var(--line); margin:4px 0 6px; }
+table.rk { width:100%; border-collapse:collapse; font-size:.88rem; }
+.rk th { text-align:left; font-weight:600; font-size:.74rem; text-transform:uppercase; letter-spacing:.05em; opacity:.7;
+  padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }
+.rk td { padding:9px 12px; border-bottom:1px solid rgba(127,127,127,.15); vertical-align:middle; }
+.rk tr:last-child td { border-bottom:none; }
+.rk tbody tr { transition:background .2s; }
+.rk tbody tr:hover td { background:rgba(99,102,241,.08); }
+.rk tr.on td { background:rgba(239,68,68,.09); }
+.rk tr.on:hover td { background:rgba(239,68,68,.15); }
+.rk tr.on td:first-child { box-shadow:inset 4px 0 0 #ef4444; }
+.rk-flag { width:22px; height:22px; display:block; animation:rk-blink 1.1s ease-in-out infinite;
+  filter:drop-shadow(0 0 6px rgba(239,68,68,.95)); }
+@keyframes rk-blink { 0%, 100% { opacity:1; transform:scale(1); } 50% { opacity:.2; transform:scale(.82); } }
+.rk-nowrap { white-space:nowrap; }
+.rk-bar { position:relative; height:20px; min-width:110px; border-radius:999px; background:rgba(127,127,127,.18); overflow:hidden; }
+.rk-bar i { position:absolute; left:0; top:0; bottom:0; border-radius:999px; background:linear-gradient(90deg,#6366f1,#06b6d4); }
+.rk tr.on .rk-bar i { background:linear-gradient(90deg,#f97316,#ef4444); }
+.rk-bar span { position:relative; display:block; text-align:center; font-weight:700; font-size:.78rem; line-height:20px; }
+.rk-why { font-size:.82rem; opacity:.88; min-width:220px; }
+.rk-yes { color:#ef4444; font-weight:700; } .rk-no { opacity:.7; }
+@media (prefers-reduced-motion: reduce) { .rk-flag { animation:none; } }
+
 /* hero banner (dashboard + landing). container queries: it adapts to its own width, not the window's */
 .hx { position:relative; overflow:hidden; border-radius:22px; color:#e2e8f0; container-type:inline-size; margin:0 0 6px;
   background:radial-gradient(900px 260px at 78% -30%,rgba(99,102,241,.6),transparent 60%),
@@ -310,3 +334,28 @@ def info_cards(cards):
     items = "".join(f"<div class='feat'><div class='ico'>{i}</div><h4>{html.escape(ti)}</h4><p>{x}</p></div>"
                     for i, ti, x in cards)
     st.markdown(f"<div class='feats'>{items}</div>", unsafe_allow_html=True)
+
+
+_FLAG = ("<svg class='rk-flag' viewBox='0 0 24 24' role='img' aria-label='flagged'><path d='M12 2 1 21h22z' fill='#ef4444'/>"
+         "<path d='M12 9v5.2' stroke='#fff' stroke-width='2.4' stroke-linecap='round'/><circle cx='12' cy='17.6' r='1.4' fill='#fff'/></svg>")
+
+
+def risk_table(rows, hindsight=False):
+    """rows: dicts with flagged, when, side, flight, other, p (0-1), why, made and, with hindsight, late ('yes'/'no')."""
+    e = html.escape
+    head = ["", "scheduled (local)", "dep/arr", "flight", "to / from", "chance of &gt;45 min delay", "why (top 3 factors)", "forecast made"]
+    if hindsight:
+        head.append("actually &gt;45 min late?")
+    body = []
+    for r in rows:
+        late = ""
+        if hindsight:
+            late = f"<td class='rk-{r['late'] or 'no'}'>{e(r['late'] or '–')}</td>"
+        body.append(
+            f"<tr class='{'on' if r['flagged'] else ''}'><td>{_FLAG if r['flagged'] else ''}</td>"
+            f"<td class='rk-nowrap'>{e(r['when'])}</td><td>{e(r['side'])}</td><td class='rk-nowrap'><b>{e(r['flight'])}</b></td>"
+            f"<td>{e(r['other'])}</td><td><div class='rk-bar'><i style='width:{max(0.0, min(1.0, r['p'])) * 100:.0f}%'></i>"
+            f"<span>{r['p']:.0%}</span></div></td><td class='rk-why'>{e(r['why'])}</td>"
+            f"<td class='rk-nowrap'>{e(r['made'])}</td>{late}</tr>")
+    st.markdown(f"<div class='rk-wrap'><table class='rk'><thead><tr>{''.join(f'<th>{h}</th>' for h in head)}</tr></thead>"
+                f"<tbody>{''.join(body)}</tbody></table></div>", unsafe_allow_html=True)

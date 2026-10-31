@@ -7,7 +7,10 @@ Every feature for a prediction issued at UTC time T uses only:
 Typical use:
     issues = make_issues(flights, horizons=[3, 6, 12])        # one row per flight x horizon
     X = build_features(issues, flights, timeline)               # weather + congestion + calendar
-    # join X back to labels on (flight_id, horizon_h)
+    # join X back to labels on (flight_id, side, horizon_h)
+
+flight_id is shared by both ends of a flight between two selected airports (e.g. ATL->DFW),
+so every join keys on (flight_id, side).
 
 Data-quality handling baked in (verified on the provided CSV, ATL/DFW subset):
   - wpgt (gust) is 0 in ~98% of rows = "no gust reported", so 0 -> NaN and gust features use
@@ -28,7 +31,7 @@ def _ns(s):
 
 def make_issues(flights, horizons=(3, 6, 12)):
     """One row per flight x horizon with issued_utc = sched_utc - h."""
-    base = flights[["flight_id", "airport", "sched_utc"]].copy()
+    base = flights[["flight_id", "side", "airport", "sched_utc"]].copy()
     base["sched_utc"] = _ns(base["sched_utc"])
     out = []
     for h in horizons:
@@ -104,18 +107,18 @@ def congestion_asof(issues, flights, lookback_h=12, buffer_h=3):
                                    "cong_n": r["count"].values}))
     cong = pd.concat(parts).sort_values("t")
     cong["t"] = _ns(cong["t"])
-    left = issues[["flight_id", "horizon_h", "airport", "issued_utc"]].copy()
+    left = issues[["flight_id", "side", "horizon_h", "airport", "issued_utc"]].copy()
     left["tc"] = _ns(left["issued_utc"]) - pd.Timedelta(hours=buffer_h)
     left = left.sort_values("tc")
     m = pd.merge_asof(left, cong, left_on="tc", right_on="t", by="airport", direction="backward")
     stale = (m["tc"] - m["t"]) > pd.Timedelta(hours=lookback_h)
     m.loc[stale, ["cong_sum", "cong_n"]] = 0
     m["cong_rate_12h"] = m["cong_sum"] / m["cong_n"].replace(0, np.nan)
-    return m[["flight_id", "horizon_h", "cong_rate_12h", "cong_n"]]
+    return m[["flight_id", "side", "horizon_h", "cong_rate_12h", "cong_n"]]
 
 
 def calendar_features(flights):
-    c = flights[["flight_id"]].copy()
+    c = flights[["flight_id", "side"]].copy()
     sl = pd.to_datetime(flights["sched_local"])
     c["hour_local"] = sl.dt.hour
     c["dow"] = sl.dt.dayofweek
@@ -126,17 +129,17 @@ def calendar_features(flights):
 
 def build_features(issues, flights, timeline, with_congestion=True):
     X = weather_asof(issues, timeline)
-    X = X.merge(calendar_features(flights), on="flight_id", how="left")
+    X = X.merge(calendar_features(flights), on=["flight_id", "side"], how="left")
     if with_congestion:
-        X = X.merge(congestion_asof(issues, flights), on=["flight_id", "horizon_h"], how="left")
+        X = X.merge(congestion_asof(issues, flights), on=["flight_id", "side", "horizon_h"], how="left")
     X["last_wx_group"] = X["last_wx_group"].fillna("unknown").astype("category")
     X["last_wind_dir_known"] = X["last_wind_dir_known"].astype(float)
     X["airport"] = X["airport"].astype("category")
-    return X.sort_values(["horizon_h", "flight_id"]).reset_index(drop=True)
+    return X.sort_values(["horizon_h", "flight_id", "side"]).reset_index(drop=True)
 
 
 def feature_columns(X):
     """Model inputs: everything except keys, minus columns that are entirely empty
     (e.g. headwind/tailwind when no wind direction is available yet)."""
-    drop = {"flight_id", "sched_utc", "issued_utc", "horizon_h"}
+    drop = {"flight_id", "side", "sched_utc", "issued_utc", "horizon_h"}  # side is in is_dep
     return [c for c in X.columns if c not in drop and X[c].notna().any()]

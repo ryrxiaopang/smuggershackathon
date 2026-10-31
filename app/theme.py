@@ -1,10 +1,10 @@
-"""Look and feel for the dashboard: one CSS layer for the whole app and an animated landing hero
+"""Look and feel for the dashboard: one CSS layer for the whole app and an animated hero banner
 (a spinning globe with planes on orbit, plus live status chips for the selected airport/moment).
-Pure presentation: no numbers are computed here."""
+The banner is plain page HTML, so it grows with its content, and it uses container queries to adapt
+to the width it is given. Pure presentation: no numbers are computed here."""
 import html
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 FONTS = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=Space+Grotesk:wght@500;700&display=swap"
 LEVEL_COLOR = {"NORMAL": "#10b981", "WATCH": "#f59e0b", "ACTION": "#ef4444"}
@@ -19,22 +19,25 @@ html, body, [class*="st-"], .stMarkdown, .stCaption { font-family:'Inter', syste
 h1, h2, h3, h4 { font-family:'Space Grotesk', 'Inter', sans-serif !important; letter-spacing:-.01em; }
 .block-container { padding-top:3.4rem; }
 
-/* tabs as glowing pills */
-.stTabs [data-baseweb="tab-list"] { gap:6px; background:var(--glass); padding:6px; border-radius:16px; border:1px solid var(--line); }
-.stTabs [data-baseweb="tab"] { border-radius:11px; padding:8px 18px; height:auto; font-weight:600; transition:all .25s ease; }
-.stTabs [data-baseweb="tab"]:hover { background:rgba(99,102,241,.16); transform:translateY(-1px); }
-.stTabs [aria-selected="true"] { background:linear-gradient(135deg,var(--c1),var(--c2)) !important; box-shadow:0 8px 22px rgba(99,102,241,.38); }
-.stTabs [aria-selected="true"] p { color:#fff !important; }
-.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] { display:none; }
-.stTabs [data-baseweb="tab-panel"] { animation:fadeUp .45s ease both; }
+/* tabs as rounded pills (the selected one matches the green status chip); they wrap instead of scrolling */
+.stTabs [role="tablist"] { display:flex; flex-wrap:wrap; gap:6px; width:fit-content; max-width:100%; padding:5px;
+  background:var(--glass); border:1px solid var(--line); border-radius:22px; }
+.stTabs [role="tab"] { border-radius:999px; padding:7px 16px; height:auto; font-weight:600; transition:background .25s, transform .25s, box-shadow .25s; }
+.stTabs [role="tab"]:hover { background:rgba(16,185,129,.14); transform:translateY(-1px); }
+.stTabs [role="tab"][aria-selected="true"] { background:linear-gradient(135deg,#10b981,#14b8a6) !important;
+  box-shadow:0 6px 18px rgba(16,185,129,.38), inset 0 0 0 1px rgba(255,255,255,.18); }
+.stTabs [role="tab"][aria-selected="true"] p { color:#fff !important; }
+.stTabs .react-aria-SelectionIndicator, .stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] { display:none !important; }
+.stTabs [role="tabpanel"] { animation:fadeUp .45s ease both; }
 @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
 
 /* metric cards: gradient glass, lift on hover, gradient numbers */
 [data-testid="stMetric"] { background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(6,182,212,.08) 60%,rgba(236,72,153,.06));
   border:1px solid var(--line); border-radius:18px; padding:14px 18px; transition:transform .25s ease, box-shadow .25s ease; }
 [data-testid="stMetric"]:hover { transform:translateY(-4px); box-shadow:0 14px 30px rgba(99,102,241,.28); }
-[data-testid="stMetricValue"] > div { white-space:normal !important; overflow:visible !important; text-overflow:clip !important; }
-[data-testid="stMetricValue"] { font-size:1.6rem !important; line-height:1.2; font-family:'Space Grotesk', sans-serif; font-weight:700;
+[data-testid="stMetricValue"] > div, [data-testid="stMetricLabel"] div, [data-testid="stMetricLabel"] p {
+  white-space:normal !important; overflow:visible !important; text-overflow:clip !important; }
+[data-testid="stMetricValue"] { font-size:clamp(1.15rem, 2.2vw, 1.6rem) !important; line-height:1.2; font-family:'Space Grotesk', sans-serif; font-weight:700;
   background:linear-gradient(90deg,var(--c1),var(--c2) 55%,var(--c3)); -webkit-background-clip:text; background-clip:text; color:transparent; }
 
 /* expanders, bordered containers, tables */
@@ -44,7 +47,9 @@ h1, h2, h3, h4 { font-family:'Space Grotesk', 'Inter', sans-serif !important; le
 [data-testid="stDataFrame"] { border-radius:12px; overflow:hidden; }
 
 /* sidebar: soft aurora */
-[data-testid="stSidebar"] { background:linear-gradient(180deg,rgba(99,102,241,.16),rgba(6,182,212,.07) 55%,rgba(236,72,153,.10)); }
+/* gradient as an image layer only: Streamlit's own opaque, theme-aware background colour stays underneath,
+   so the sidebar never turns see-through when it slides over the page on narrow screens */
+[data-testid="stSidebar"] { background-image:linear-gradient(180deg,rgba(99,102,241,.16),rgba(6,182,212,.07) 55%,rgba(236,72,153,.10)); }
 [data-testid="stSidebar"] h1 { background:linear-gradient(90deg,var(--c1),var(--c2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
 
 /* buttons */
@@ -97,6 +102,109 @@ h1, h2, h3, h4 { font-family:'Space Grotesk', 'Inter', sans-serif !important; le
 @keyframes flowline { to { background-position:-200% 0; } }
 @media (max-width:900px) { .arrow { display:none; } }
 .landing-foot { text-align:center; opacity:.65; font-size:.82rem; margin-top:18px; }
+
+/* hero banner (dashboard + landing). container queries: it adapts to its own width, not the window's */
+.hx { position:relative; overflow:hidden; border-radius:22px; color:#e2e8f0; container-type:inline-size; margin:0 0 6px;
+  background:radial-gradient(900px 260px at 78% -30%,rgba(99,102,241,.6),transparent 60%),
+             radial-gradient(600px 300px at 5% 130%,rgba(6,182,212,.45),transparent 60%),
+             radial-gradient(400px 200px at 50% 120%,rgba(236,72,153,.25),transparent 60%),
+             linear-gradient(135deg,#070b1f 0%,#121741 45%,#1e1b4b 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); }
+.hx-row { position:relative; display:flex; align-items:center; gap:12px; padding:22px 26px; }
+.hx-text { position:relative; z-index:5; flex:1 1 auto; min-width:0; }
+.hx-star { position:absolute; width:2px; height:2px; border-radius:50%; background:#fff; animation:hx-tw 3.2s infinite ease-in-out; }
+@keyframes hx-tw { 0%,100% { opacity:.12; } 50% { opacity:.95; } }
+.hx-shoot { position:absolute; top:18%; left:-10%; width:120px; height:1px; background:linear-gradient(90deg,transparent,#fff);
+  transform:rotate(-12deg); animation:hx-shoot 7s 2s infinite ease-in; opacity:0; }
+@keyframes hx-shoot { 0% { left:-10%; opacity:0; } 3% { opacity:1; } 12% { left:60%; opacity:0; } 100% { left:60%; opacity:0; } }
+.hx-eyebrow { font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#a5b4fc; font-weight:600; }
+.hx-title { font-family:'Space Grotesk',Inter,sans-serif; font-weight:700; font-size:clamp(22px,3.6cqi,32px); line-height:1.12; margin:6px 0 8px;
+  background:linear-gradient(90deg,#fff 0%,#a5f3fc 30%,#c4b5fd 60%,#f9a8d4 80%,#fff 100%); background-size:200% auto;
+  -webkit-background-clip:text; background-clip:text; color:transparent; animation:hx-shine 7s linear infinite; }
+@keyframes hx-shine { to { background-position:200% center; } }
+.hx-h2 { font-family:'Space Grotesk',Inter,sans-serif; font-size:clamp(16px,2.6cqi,24px); color:#a5f3fc; font-weight:500; margin:0 0 12px; }
+.hx-sub { color:#cbd5e1; font-size:13.5px; line-height:1.5; margin:0 0 14px; max-width:640px; }
+.hx-chips, .hx-stats { display:flex; flex-wrap:wrap; gap:8px; }
+.hx-chip { font-size:12.5px; font-weight:600; padding:5px 12px; border-radius:999px; background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.16); backdrop-filter:blur(6px); transition:transform .2s, background .2s;
+  animation:hx-pop .5s cubic-bezier(.2,.8,.2,1) both; }
+.hx-chip:nth-child(2) { animation-delay:.08s; } .hx-chip:nth-child(3) { animation-delay:.16s; }
+.hx-chip:nth-child(4) { animation-delay:.24s; } .hx-chip:nth-child(5) { animation-delay:.32s; }
+.hx-chip:hover { transform:translateY(-3px); background:rgba(255,255,255,.18); }
+@keyframes hx-pop { from { opacity:0; transform:translateY(8px) scale(.96); } to { opacity:1; transform:none; } }
+.hx-lvl { color:#fff; border:none; }
+.hx-lvl.ACTION { background:#ef4444; animation:hx-pop .5s both, pulseR 1.8s .6s infinite; }
+.hx-lvl.WATCH { background:#f59e0b; animation:hx-pop .5s both, pulseA 2.2s .6s infinite; }
+.hx-lvl.NORMAL { background:#10b981; }
+.hx-stat { padding:10px 14px; border-radius:16px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14);
+  backdrop-filter:blur(6px); transition:transform .25s, background .25s; animation:hx-pop .6s cubic-bezier(.2,.8,.2,1) both; }
+.hx-stat:nth-child(2) { animation-delay:.1s; } .hx-stat:nth-child(3) { animation-delay:.2s; } .hx-stat:nth-child(4) { animation-delay:.3s; }
+.hx-stat:hover { transform:translateY(-4px); background:rgba(255,255,255,.14); }
+.hx-stat b { display:block; font-family:'Space Grotesk',sans-serif; font-size:clamp(20px,3cqi,28px);
+  background:linear-gradient(90deg,#a5f3fc,#c4b5fd,#f9a8d4); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.hx-stat span { font-size:12px; color:#cbd5e1; }
+
+/* globe + planes: drawn at 320x220 and scaled as a whole */
+.hx-scene { position:relative; flex:0 0 auto; width:320px; height:220px; margin:-12px -14px -12px 0; }
+.hx-stage { position:absolute; left:0; top:0; width:320px; height:220px; transform-origin:0 0; }
+.hx-tilt { position:absolute; inset:0; transform:rotate(-16deg); }
+.hx-tilt.b { transform:rotate(22deg); }
+.hx-globe { position:absolute; left:85px; top:35px; width:150px; height:150px; border-radius:50%; z-index:2; overflow:hidden;
+  background:radial-gradient(circle at 50% 50%,#1e40af,#0b1e5b 75%); box-shadow:0 0 50px rgba(96,165,250,.55),0 0 110px rgba(99,102,241,.35); }
+.hx-land { position:absolute; inset:0; background-repeat:repeat-x; background-size:150px 150px; animation:hx-spin 14s linear infinite; opacity:.9;
+  background-image:radial-gradient(ellipse 22px 30px at 22px 52px,#34d399 55%,transparent 58%),
+   radial-gradient(ellipse 14px 22px at 34px 98px,#10b981 55%,transparent 58%),
+   radial-gradient(ellipse 30px 20px at 92px 44px,#2dd4bf 55%,transparent 58%),
+   radial-gradient(ellipse 16px 24px at 98px 92px,#34d399 55%,transparent 58%),
+   radial-gradient(ellipse 18px 10px at 126px 118px,#5eead4 55%,transparent 58%),
+   radial-gradient(ellipse 10px 8px at 66px 20px,#a7f3d0 55%,transparent 58%); }
+.hx-grid { position:absolute; inset:0; animation:hx-spin 14s linear infinite;
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.16) 0 1px,transparent 1px 25px),
+                   repeating-linear-gradient(0deg,rgba(255,255,255,.10) 0 1px,transparent 1px 25px); }
+@keyframes hx-spin { from { background-position:0 0; } to { background-position:150px 0; } }
+.hx-shade { position:absolute; inset:0; border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.35),transparent 35%),
+             radial-gradient(circle at 70% 75%,rgba(2,6,23,.75),transparent 60%),
+             radial-gradient(circle at 50% 50%,transparent 58%,rgba(2,6,23,.65) 72%); }
+.hx-pin { position:absolute; left:58%; top:38%; width:8px; height:8px; border-radius:50%; background:#f472b6; z-index:3; box-shadow:0 0 10px #f472b6; }
+.hx-pin::after { content:""; position:absolute; inset:-4px; border-radius:50%; border:2px solid #f472b6; animation:hx-ping 1.8s infinite; }
+@keyframes hx-ping { from { transform:scale(.6); opacity:1; } to { transform:scale(2.6); opacity:0; } }
+.hx-orbit { position:absolute; inset:0; overflow:visible; }
+.hx-orbit ellipse { fill:none; stroke:rgba(165,180,252,.45); stroke-width:1.2; stroke-dasharray:3 7; animation:hx-dash 2.5s linear infinite; }
+.hx-tilt.b .hx-orbit ellipse { stroke:rgba(244,114,182,.35); }
+@keyframes hx-dash { to { stroke-dashoffset:-20; } }
+.hx-plane { position:absolute; left:0; top:0; width:36px; height:36px; offset-rotate:auto;
+  filter:drop-shadow(0 0 6px rgba(165,243,252,.9)) drop-shadow(-14px 0 6px rgba(255,255,255,.25));
+  offset-path:path("M 20 110 A 140 46 0 1 1 300 110 A 140 46 0 1 1 20 110"); animation:hx-fly 9s linear infinite; }
+.hx-tilt.b .hx-plane { width:22px; height:22px; offset-path:path("M 50 110 A 110 34 0 1 1 270 110 A 110 34 0 1 1 50 110");
+  animation:hx-fly 12s linear infinite reverse; filter:drop-shadow(0 0 5px rgba(249,168,212,.9)); }
+.hx-plane svg { display:block; width:100%; height:100%; }
+@keyframes hx-fly { 0% { offset-distance:0%; z-index:1; transform:scale(.85); opacity:.85; }
+  25% { transform:scale(.6); opacity:.55; } 49.9% { z-index:1; } 50% { z-index:3; transform:scale(.85); opacity:.9; }
+  75% { transform:scale(1.15); opacity:1; } 100% { offset-distance:100%; z-index:3; transform:scale(.85); opacity:.85; } }
+
+/* landing (big) version */
+.hx.big { border-radius:28px; }
+.hx.big .hx-row { padding:44px 48px; }
+.hx.big .hx-title { font-size:clamp(30px,6cqi,56px); margin:10px 0 4px; }
+.hx.big .hx-sub { font-size:15px; margin-bottom:22px; }
+.hx.big .hx-scene { width:480px; height:330px; margin:0 -20px 0 0; }
+.hx.big .hx-stage { transform:scale(1.5); }
+
+/* medium width: the globe becomes a faded backdrop behind the text, so nothing is squeezed or cut */
+@container (max-width: 860px) {
+  .hx-scene, .hx.big .hx-scene { position:absolute; right:-60px; top:50%; width:320px; height:220px; margin:0;
+    transform:translateY(-50%); opacity:.45; pointer-events:none; }
+  .hx.big .hx-stage { transform:scale(1); }
+  .hx-row, .hx.big .hx-row { padding:24px 26px; }
+}
+/* phone width: no globe, tighter spacing */
+@container (max-width: 520px) {
+  .hx-scene, .hx.big .hx-scene { display:none; }
+  .hx-row, .hx.big .hx-row { padding:18px 18px; }
+  .hx-sub, .hx.big .hx-sub { font-size:12.5px; }
+  .hx-chip { font-size:11.5px; padding:4px 10px; }
+}
 </style>
 """.replace("__FONTS__", FONTS)
 
@@ -112,146 +220,13 @@ def badge(level):
 _PLANE = ("<svg viewBox='0 0 24 24' width='100%' height='100%'><path fill='#fff' d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2"
           "l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z' transform='rotate(90 12 12)'/></svg>")
 
-HERO = """<!doctype html><html><head><meta charset="utf-8"><link href="__FONTS__" rel="stylesheet"><style>
-*{box-sizing:border-box;margin:0}
-body{font-family:Inter,system-ui,sans-serif;background:transparent;overflow:hidden}
-.hero{position:relative;overflow:hidden;height:256px;border-radius:22px;padding:24px 30px;color:#e2e8f0;
-  display:flex;align-items:center;justify-content:space-between;gap:16px;
-  background:radial-gradient(900px 260px at 78% -30%,rgba(99,102,241,.6),transparent 60%),
-             radial-gradient(600px 300px at 5% 130%,rgba(6,182,212,.45),transparent 60%),
-             radial-gradient(400px 200px at 50% 120%,rgba(236,72,153,.25),transparent 60%),
-             linear-gradient(135deg,#070b1f 0%,#121741 45%,#1e1b4b 100%);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
-.star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;animation:tw 3.2s infinite ease-in-out}
-@keyframes tw{0%,100%{opacity:.12}50%{opacity:.95}}
-.shoot{position:absolute;top:18%;left:-10%;width:120px;height:1px;background:linear-gradient(90deg,transparent,#fff);
-  transform:rotate(-12deg);animation:shoot 7s 2s infinite ease-in;opacity:0}
-@keyframes shoot{0%{left:-10%;opacity:0}3%{opacity:1}12%{left:60%;opacity:0}100%{left:60%;opacity:0}}
-.text{position:relative;z-index:5;max-width:62%}
-.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#a5b4fc;font-weight:600}
-h1{font-family:'Space Grotesk',Inter,sans-serif;font-size:30px;line-height:1.1;margin:6px 0 8px;
-  background:linear-gradient(90deg,#fff 0%,#a5f3fc 30%,#c4b5fd 60%,#f9a8d4 80%,#fff 100%);background-size:200% auto;
-  -webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 7s linear infinite}
-@keyframes shine{to{background-position:200% center}}
-.sub{color:#cbd5e1;font-size:13.5px;line-height:1.45;margin-bottom:14px}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.08);
-  border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(6px);transition:transform .2s,background .2s;cursor:default;
-  animation:pop .5s cubic-bezier(.2,.8,.2,1) both}
-.chip:nth-child(2){animation-delay:.08s}.chip:nth-child(3){animation-delay:.16s}.chip:nth-child(4){animation-delay:.24s}.chip:nth-child(5){animation-delay:.32s}
-.chip:hover{transform:translateY(-3px);background:rgba(255,255,255,.18)}
-@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
-.lvl{color:#fff;border:none}
-.lvl.ACTION{background:#ef4444;animation:pop .5s both,pr 1.8s .6s infinite}
-.lvl.WATCH{background:#f59e0b;animation:pop .5s both,pa 2.2s .6s infinite}
-.lvl.NORMAL{background:#10b981}
-@keyframes pr{0%{box-shadow:0 0 0 0 rgba(239,68,68,.7)}70%{box-shadow:0 0 0 12px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
-@keyframes pa{0%{box-shadow:0 0 0 0 rgba(245,158,11,.7)}70%{box-shadow:0 0 0 12px rgba(245,158,11,0)}100%{box-shadow:0 0 0 0 rgba(245,158,11,0)}}
-
-.scene{position:relative;width:320px;height:220px;flex:none}
-.tilt{position:absolute;inset:0;transform:rotate(-16deg)}
-.tilt.b{transform:rotate(22deg)}
-.globe{position:absolute;left:85px;top:35px;width:150px;height:150px;border-radius:50%;z-index:2;overflow:hidden;
-  background:radial-gradient(circle at 50% 50%,#1e40af,#0b1e5b 75%);
-  box-shadow:0 0 50px rgba(96,165,250,.55),0 0 110px rgba(99,102,241,.35)}
-.land{position:absolute;inset:0;background-repeat:repeat-x;background-size:150px 150px;animation:spin 14s linear infinite;opacity:.9;
-  background-image:
-   radial-gradient(ellipse 22px 30px at 22px 52px,#34d399 55%,transparent 58%),
-   radial-gradient(ellipse 14px 22px at 34px 98px,#10b981 55%,transparent 58%),
-   radial-gradient(ellipse 30px 20px at 92px 44px,#2dd4bf 55%,transparent 58%),
-   radial-gradient(ellipse 16px 24px at 98px 92px,#34d399 55%,transparent 58%),
-   radial-gradient(ellipse 18px 10px at 126px 118px,#5eead4 55%,transparent 58%),
-   radial-gradient(ellipse 10px 8px at 66px 20px,#a7f3d0 55%,transparent 58%)}
-.grid{position:absolute;inset:0;animation:spin 14s linear infinite;
-  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.16) 0 1px,transparent 1px 25px),
-                   repeating-linear-gradient(0deg,rgba(255,255,255,.10) 0 1px,transparent 1px 25px)}
-@keyframes spin{from{background-position:0 0}to{background-position:150px 0}}
-.shade{position:absolute;inset:0;border-radius:50%;
-  background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.35),transparent 35%),
-             radial-gradient(circle at 70% 75%,rgba(2,6,23,.75),transparent 60%),
-             radial-gradient(circle at 50% 50%,transparent 58%,rgba(2,6,23,.65) 72%)}
-.pin{position:absolute;left:58%;top:38%;width:8px;height:8px;border-radius:50%;background:#f472b6;z-index:3;box-shadow:0 0 10px #f472b6}
-.pin::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid #f472b6;animation:ping 1.8s infinite}
-@keyframes ping{from{transform:scale(.6);opacity:1}to{transform:scale(2.6);opacity:0}}
-svg.orbit{position:absolute;inset:0;overflow:visible}
-svg.orbit ellipse{fill:none;stroke:rgba(165,180,252,.45);stroke-width:1.2;stroke-dasharray:3 7;animation:dash 2.5s linear infinite}
-.tilt.b svg.orbit ellipse{stroke:rgba(244,114,182,.35)}
-@keyframes dash{to{stroke-dashoffset:-20}}
-.plane{position:absolute;left:0;top:0;width:36px;height:36px;offset-rotate:auto;
-  filter:drop-shadow(0 0 6px rgba(165,243,252,.9)) drop-shadow(-14px 0 6px rgba(255,255,255,.25));
-  offset-path:path("M 20 110 A 140 46 0 1 1 300 110 A 140 46 0 1 1 20 110");animation:fly 9s linear infinite}
-.tilt.b .plane{width:22px;height:22px;offset-path:path("M 50 110 A 110 34 0 1 1 270 110 A 110 34 0 1 1 50 110");
-  animation:fly 12s linear infinite reverse;filter:drop-shadow(0 0 5px rgba(249,168,212,.9))}
-@keyframes fly{0%{offset-distance:0%;z-index:1;transform:scale(.85);opacity:.85}
-  25%{transform:scale(.6);opacity:.55}49.9%{z-index:1}50%{z-index:3;transform:scale(.85);opacity:.9}
-  75%{transform:scale(1.15);opacity:1}100%{offset-distance:100%;z-index:3;transform:scale(.85);opacity:.85}}
-@media (max-width:980px){.scene{transform:scale(.8);margin-right:-40px}}
-@media (max-width:760px){.scene{display:none}.text{max-width:100%}h1{font-size:24px}.sub{display:none}}
-__EXTRA_CSS__
-</style></head><body>
-<div class="hero">
-  __STARS__<div class="shoot"></div>
-  <div class="text">__TEXT__</div>
-  <div class="scene">
-    <div class="tilt b"><svg class="orbit" viewBox="0 0 320 220"><ellipse cx="160" cy="110" rx="110" ry="34"/></svg>
-      <div class="plane">__PLANE__</div></div>
-    <div class="tilt"><svg class="orbit" viewBox="0 0 320 220"><ellipse cx="160" cy="110" rx="140" ry="46"/></svg>
-      <div class="globe"><div class="land"></div><div class="grid"></div><div class="shade"></div><div class="pin"></div></div>
-      <div class="plane">__PLANE__</div></div>
-  </div>
-</div>__SCRIPT__</body></html>"""
-
-DASH_TEXT = """
-    <div class="eyebrow">Autonomous SG 2026 · Airbus Challenge #5</div>
-    <h1>Airport Capacity &amp; Delay-Risk</h1>
-    <div class="sub">Early warning for ops duty managers: congestion and &gt;45-minute delay risk 3–12 hours ahead,
-      with the weather evidence behind every call.</div>
-    <div class="chips">
-      <span class="chip lvl __LEVEL__">__ICON__ __LEVEL__ · __MEANING__</span>
-      <span class="chip">📍 __AP__</span>
-      <span class="chip">🕕 __WHEN__</span>
-      <span class="chip">⏱ next __H__ h</span>
-      <span class="chip">__PEAK__</span>
-    </div>"""
-
-LANDING_TEXT = """
-    <div class="eyebrow">Autonomous SG 2026 · Airbus Challenge #5 · Atlanta &amp; Dallas/Fort Worth</div>
-    <h1>See the squeeze coming.</h1>
-    <div class="h2">Airport capacity &amp; delay risk, 3–12 hours ahead.</div>
-    <div class="sub">For airline ops duty managers and ATC flow coordinators. It forecasts how many flights will be
-      disrupted and which ones will run more than 45 minutes late, from weather and flight data,
-      and shows the evidence behind every call. The human decides.</div>
-    <div class="stats">__STATS__</div>"""
-
-LANDING_CSS = """
-.hero{height:500px;padding:44px 52px;border-radius:28px}
-.text{max-width:64%}
-h1{font-size:54px;margin:10px 0 4px}
-.h2{font-family:'Space Grotesk',Inter,sans-serif;font-size:24px;color:#a5f3fc;font-weight:500;margin-bottom:14px}
-.sub{font-size:15px;max-width:600px;margin-bottom:22px}
-.scene{transform:scale(1.6);margin-right:110px}
-.stats{display:flex;gap:14px;flex-wrap:wrap}
-.stat{min-width:96px;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
-  backdrop-filter:blur(6px);transition:transform .25s,background .25s}
-.stat:hover{transform:translateY(-4px);background:rgba(255,255,255,.14)}
-.stat b{display:block;font-family:'Space Grotesk',sans-serif;font-size:28px;
-  background:linear-gradient(90deg,#a5f3fc,#c4b5fd,#f9a8d4);-webkit-background-clip:text;background-clip:text;color:transparent}
-.stat span{font-size:12px;color:#cbd5e1}
-@media (max-width:1150px){.scene{transform:scale(1.15);margin-right:20px}h1{font-size:42px}}
-@media (max-width:980px){.hero{padding:34px 36px}.scene{transform:scale(.95);margin-right:-10px}.text{max-width:62%}h1{font-size:34px}.h2{font-size:17px;margin-bottom:10px}.sub{font-size:13px;margin-bottom:14px}.stats{gap:8px}.stat{padding:8px 12px;min-width:0}.stat b{font-size:21px}.stat span{font-size:11px}}
-@media (max-width:760px){.hero{height:500px;padding:28px}h1{font-size:34px}.h2{font-size:18px}.text{max-width:100%}.sub{display:block;font-size:13px}.scene{display:block;position:absolute;right:-70px;bottom:-40px;transform:scale(.85);opacity:.75;margin:0}}
-"""
-
-COUNT_UP = """<script>
-document.querySelectorAll('[data-to]').forEach(function(el){
-  var to=parseFloat(el.dataset.to), dec=parseInt(el.dataset.dec||'0'), suf=el.dataset.suf||'', t0=null, dur=1600;
-  function step(t){ if(!t0) t0=t; var k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
-    el.textContent=(to*e).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec})+suf;
-    if(k<1) requestAnimationFrame(step); }
-  requestAnimationFrame(step);
-  setTimeout(function(){ step(t0 === null ? 0 : t0 + dur); }, dur + 400);  // land on the final value even if frames are throttled
-});
-</script>"""
+_SCENE = ("<div class='hx-scene'><div class='hx-stage'>"
+          "<div class='hx-tilt b'><svg class='hx-orbit' viewBox='0 0 320 220'><ellipse cx='160' cy='110' rx='110' ry='34'/></svg>"
+          "<div class='hx-plane'>__PLANE__</div></div>"
+          "<div class='hx-tilt'><svg class='hx-orbit' viewBox='0 0 320 220'><ellipse cx='160' cy='110' rx='140' ry='46'/></svg>"
+          "<div class='hx-globe'><div class='hx-land'></div><div class='hx-grid'></div><div class='hx-shade'></div>"
+          "<div class='hx-pin'></div></div><div class='hx-plane'>__PLANE__</div></div>"
+          "</div></div>").replace("__PLANE__", _PLANE)
 
 
 def _stars(n=42):
@@ -259,9 +234,15 @@ def _stars(n=42):
     out = []
     for i in range(n):
         x, y = (i * 37) % 100, (i * 53 + 11) % 100
-        out.append(f"<span class='star' style='left:{x}%;top:{y}%;animation-delay:{(i % 7) * .45:.2f}s;"
-                   f"opacity:.{2 + i % 7}'></span>")
+        out.append(f"<span class='hx-star' style='left:{x}%;top:{y}%;animation-delay:{(i % 7) * .45:.2f}s'></span>")
     return "".join(out)
+
+
+def _render(text_html, big=False, stars=42):
+    # one line, no indentation: markdown would treat indented lines as a code block
+    page = (f"<div class='hx{' big' if big else ''}'>{_stars(stars)}<div class='hx-shoot'></div>"
+            f"<div class='hx-row'><div class='hx-text'>{text_html}</div>{_SCENE}</div></div>")
+    st.markdown(page, unsafe_allow_html=True)
 
 
 def hero(ap, when, horizon, level, meaning, peak, normal):
@@ -269,22 +250,26 @@ def hero(ap, when, horizon, level, meaning, peak, normal):
         peak_txt = "📊 no congestion forecast in this window"
     else:
         peak_txt = f"📊 up to {peak*100:.0f} of 100 flights disrupted (normal ≤ {normal*100:.0f})"
-    page = (HERO.replace("__TEXT__", DASH_TEXT).replace("__EXTRA_CSS__", "").replace("__SCRIPT__", "")
-            .replace("__FONTS__", FONTS).replace("__STARS__", _stars()).replace("__PLANE__", _PLANE)
-            .replace("__LEVEL__", level).replace("__ICON__", LEVEL_ICON[level]).replace("__MEANING__", html.escape(meaning))
-            .replace("__AP__", html.escape(ap)).replace("__WHEN__", html.escape(when)).replace("__H__", str(horizon))
-            .replace("__PEAK__", html.escape(peak_txt)))
-    components.html(page, height=262)
+    e = html.escape
+    _render("<div class='hx-eyebrow'>Autonomous SG 2026 · Airbus Challenge #5</div>"
+            "<div class='hx-title'>Airport Capacity &amp; Delay-Risk</div>"
+            "<div class='hx-chips'>"
+            f"<span class='hx-chip hx-lvl {level}'>{LEVEL_ICON[level]} {level} · {e(meaning)}</span>"
+            f"<span class='hx-chip'>📍 {e(ap)}</span><span class='hx-chip'>🕕 {e(when)}</span>"
+            f"<span class='hx-chip'>⏱ next {horizon} h</span><span class='hx-chip'>{e(peak_txt)}</span></div>")
 
 
 def landing_hero(stats):
-    """Big landing version of the hero. stats: list of (number, decimals, suffix, label); numbers count up."""
-    cards = "".join(f"<div class='stat'><b data-to='{v}' data-dec='{d}' data-suf='{html.escape(suf)}'>0</b>"
-                    f"<span>{html.escape(label)}</span></div>" for v, d, suf, label in stats)
-    page = (HERO.replace("__TEXT__", LANDING_TEXT.replace("__STATS__", cards)).replace("__EXTRA_CSS__", LANDING_CSS)
-            .replace("__SCRIPT__", COUNT_UP).replace("__FONTS__", FONTS).replace("__STARS__", _stars(70))
-            .replace("__PLANE__", _PLANE))
-    components.html(page, height=512)
+    """Big landing version. stats: list of (number, decimals, suffix, label)."""
+    cards = "".join(f"<div class='hx-stat'><b>{v:,.{d}f}{html.escape(suf)}</b><span>{html.escape(label)}</span></div>"
+                    for v, d, suf, label in stats)
+    _render("<div class='hx-eyebrow'>Autonomous SG 2026 · Airbus Challenge #5 · Atlanta &amp; Dallas/Fort Worth</div>"
+            "<div class='hx-title'>See the squeeze coming.</div>"
+            "<div class='hx-h2'>Airport capacity &amp; delay risk, 3–12 hours ahead.</div>"
+            "<div class='hx-sub'>For airline ops duty managers and ATC flow coordinators. It forecasts how many flights will be "
+            "disrupted and which ones will run more than 45 minutes late, from weather and flight data, and shows the evidence "
+            "behind every call. The human decides.</div>"
+            f"<div class='hx-stats'>{cards}</div>", big=True, stars=70)
 
 
 def feature_cards(cards):

@@ -10,3 +10,5 @@ venv/
 .env
 .ipynb_checkpoints/
 .DS_Store
+# fitted model bundles are rebuilt by the scripts
+outputs/*.joblib

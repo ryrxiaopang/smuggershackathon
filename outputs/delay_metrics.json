@@ -1,0 +1,1418 @@
+{
+  "meta": {
+    "source": "parquet:flight_sides.parquet+weather_timeline.parquet",
+    "airports": [
+      "ATL",
+      "DFW"
+    ],
+    "horizons": [
+      3,
+      6,
+      12
+    ],
+    "split": {
+      "train_end": "2024-06-30",
+      "val_end": "2024-12-31"
+    },
+    "target_recall": 0.6,
+    "wind_dir_known_share": 0.9167089893346877,
+    "weather_note": "Weather is OBSERVATIONS (not forecasts) with obs_utc <= issue time T = sched_utc - horizon.",
+    "rates": "All rates are per 100 flights of the stated airport/side; no raw delay minutes are reported.",
+    "label_report": {
+      "total_flight_sides": 25612,
+      "excluded_cancelled": 350,
+      "excluded_diverted": 78,
+      "excluded_missing_delay": 0,
+      "labelled": 25184,
+      "excluded_total": 428,
+      "base_rate_per_100_by_airport_side": {
+        "ATL|arr": {
+          "test": {
+            "n": 1265,
+            "delayed_per_100": 10.12
+          },
+          "train": {
+            "n": 3064,
+            "delayed_per_100": 8.65
+          },
+          "val": {
+            "n": 1032,
+            "delayed_per_100": 7.66
+          }
+        },
+        "ATL|dep": {
+          "test": {
+            "n": 1757,
+            "delayed_per_100": 12.86
+          },
+          "train": {
+            "n": 4882,
+            "delayed_per_100": 8.17
+          },
+          "val": {
+            "n": 1676,
+            "delayed_per_100": 8.83
+          }
+        },
+        "DFW|arr": {
+          "test": {
+            "n": 913,
+            "delayed_per_100": 14.79
+          },
+          "train": {
+            "n": 2199,
+            "delayed_per_100": 10.91
+          },
+          "val": {
+            "n": 811,
+            "delayed_per_100": 10.36
+          }
+        },
+        "DFW|dep": {
+          "test": {
+            "n": 1769,
+            "delayed_per_100": 14.92
+          },
+          "train": {
+            "n": 4249,
+            "delayed_per_100": 12.94
+          },
+          "val": {
+            "n": 1567,
+            "delayed_per_100": 11.1
+          }
+        }
+      },
+      "by_airport_side_excluded": {
+        "ATL|arr": 68,
+        "ATL|dep": 100,
+        "DFW|arr": 109,
+        "DFW|dep": 151
+      }
+    }
+  },
+  "by_horizon": {
+    "h3": {
+      "main_feature_set": "full",
+      "n_train": 14394,
+      "n_val": 5086,
+      "n_test": 5704,
+      "val_pr_auc_by_set": {
+        "calendar": 0.19574953054669333,
+        "cal_wx": 0.23593115208007093,
+        "full": 0.23691453164088316
+      },
+      "test": {
+        "base_rate": {
+          "p": 0.10101431151868834,
+          "pr_auc": 0.13201262272089762,
+          "roc_auc": 0.5,
+          "brier": 0.11554618546063657
+        },
+        "calendar_only": {
+          "n": 5704,
+          "pr_auc": 0.20865252006690052,
+          "roc_auc": 0.6415007847154437,
+          "brier": 0.11148029857390979
+        },
+        "calendar_plus_weather": {
+          "n": 5704,
+          "pr_auc": 0.26020068831644927,
+          "roc_auc": 0.6741439278904043,
+          "brier": 0.1083965759093469
+        },
+        "calendar_weather_congestion": {
+          "n": 5704,
+          "pr_auc": 0.2625689855902184,
+          "roc_auc": 0.6785967286848029,
+          "brier": 0.10812449302258387
+        },
+        "model": {
+          "n": 5704,
+          "pr_auc": 0.2625689855902184,
+          "roc_auc": 0.6785967286848029,
+          "brier": 0.10812449302258387
+        }
+      },
+      "operating_point": {
+        "model": {
+          "threshold": 0.11037123714858033,
+          "precision": 0.19838523644752018,
+          "recall": 0.6852589641434262,
+          "n_flights": 5704,
+          "delayed_per_100": 13.201262272089762,
+          "flagged_per_100": 45.59957924263674,
+          "caught_per_100": 9.046283309957925,
+          "false_alarms_per_100": 36.55329593267882,
+          "missed_per_100": 4.154978962131837
+        },
+        "calendar_only": {
+          "threshold": 0.09954878352797845,
+          "precision": 0.18044027426921688,
+          "recall": 0.6640106241699867,
+          "n_flights": 5704,
+          "delayed_per_100": 13.201262272089762,
+          "flagged_per_100": 48.57994389901823,
+          "caught_per_100": 8.76577840112202,
+          "false_alarms_per_100": 39.81416549789621,
+          "missed_per_100": 4.435483870967742
+        },
+        "base_rate_flag_all": {
+          "threshold": 0.5,
+          "precision": 0.13201262272089762,
+          "recall": 1.0,
+          "n_flights": 5704,
+          "delayed_per_100": 13.201262272089762,
+          "flagged_per_100": 100.0,
+          "caught_per_100": 13.201262272089762,
+          "false_alarms_per_100": 86.79873772791024,
+          "missed_per_100": 0.0
+        },
+        "top_risk_lists": {
+          "top_5pct": {
+            "model": {
+              "frac": 0.05,
+              "flagged_per_100": 5.014025245441795,
+              "precision": 0.3986013986013986,
+              "recall": 0.15139442231075698,
+              "lift_over_base_rate": 3.019418828183768
+            },
+            "calendar_only": {
+              "frac": 0.05,
+              "flagged_per_100": 5.014025245441795,
+              "precision": 0.3111888111888112,
+              "recall": 0.11819389110225764,
+              "lift_over_base_rate": 2.3572655763890826
+            }
+          },
+          "top_10pct": {
+            "model": {
+              "frac": 0.1,
+              "flagged_per_100": 10.010518934081347,
+              "precision": 0.3257443082311734,
+              "recall": 0.24701195219123506,
+              "lift_over_base_rate": 2.46752394973521
+            },
+            "calendar_only": {
+              "frac": 0.1,
+              "flagged_per_100": 10.010518934081347,
+              "precision": 0.2521891418563923,
+              "recall": 0.19123505976095617,
+              "lift_over_base_rate": 1.9103411223756463
+            }
+          }
+        },
+        "val_recall_at_threshold": 0.6,
+        "by_airport": {
+          "ATL": {
+            "n": 3022,
+            "pr_auc": 0.2535409196256777,
+            "roc_auc": 0.6904402671545583,
+            "brier": 0.09703353045179391,
+            "calendar_pr_auc": 0.204668943993481,
+            "base_rate_per_100": 11.71409662475182,
+            "op_threshold": 0.11037123714858033,
+            "op_precision": 0.19815668202764977,
+            "op_recall": 0.6073446327683616,
+            "op_n_flights": 3022,
+            "op_delayed_per_100": 11.71409662475182,
+            "op_flagged_per_100": 35.90337524818001,
+            "op_caught_per_100": 7.114493712772998,
+            "op_false_alarms_per_100": 28.788881535407015,
+            "op_missed_per_100": 4.599602911978822
+          },
+          "DFW": {
+            "n": 2682,
+            "pr_auc": 0.278117262715453,
+            "roc_auc": 0.6604948639667498,
+            "brier": 0.12062146874552468,
+            "calendar_pr_auc": 0.2219844085977516,
+            "base_rate_per_100": 14.876957494407158,
+            "op_threshold": 0.11037123714858033,
+            "op_precision": 0.19854881266490765,
+            "op_recall": 0.7543859649122807,
+            "op_n_flights": 2682,
+            "op_delayed_per_100": 14.876957494407158,
+            "op_flagged_per_100": 56.524981357196125,
+            "op_caught_per_100": 11.22296793437733,
+            "op_false_alarms_per_100": 45.30201342281879,
+            "op_missed_per_100": 3.6539895600298284
+          }
+        },
+        "by_airport_side": {
+          "ATL|dep": {
+            "n": 1757,
+            "pr_auc": 0.2963779574592623,
+            "roc_auc": 0.70744148945394,
+            "brier": 0.1038073963056216,
+            "calendar_pr_auc": 0.24074991022702918,
+            "threshold": 0.11037123714858033,
+            "precision": 0.22611464968152867,
+            "recall": 0.6283185840707964,
+            "n_flights": 1757,
+            "delayed_per_100": 12.8628343767786,
+            "flagged_per_100": 35.74274331246443,
+            "caught_per_100": 8.081957882754695,
+            "false_alarms_per_100": 27.660785429709733,
+            "missed_per_100": 4.780876494023905
+          },
+          "ATL|arr": {
+            "n": 1265,
+            "pr_auc": 0.2004870970566896,
+            "roc_auc": 0.6624374725153914,
+            "brier": 0.08762508594177397,
+            "calendar_pr_auc": 0.16751207285837688,
+            "threshold": 0.11037123714858033,
+            "precision": 0.15973741794310722,
+            "recall": 0.5703125,
+            "n_flights": 1265,
+            "delayed_per_100": 10.118577075098814,
+            "flagged_per_100": 36.126482213438734,
+            "caught_per_100": 5.770750988142293,
+            "false_alarms_per_100": 30.35573122529644,
+            "missed_per_100": 4.3478260869565215
+          },
+          "DFW|dep": {
+            "n": 1769,
+            "pr_auc": 0.31245043863316074,
+            "roc_auc": 0.691985049833887,
+            "brier": 0.1177960522421468,
+            "calendar_pr_auc": 0.2374105461788067,
+            "threshold": 0.11037123714858033,
+            "precision": 0.20918367346938777,
+            "recall": 0.7765151515151515,
+            "n_flights": 1769,
+            "delayed_per_100": 14.92368569813454,
+            "flagged_per_100": 55.398530243075186,
+            "caught_per_100": 11.588468061051442,
+            "false_alarms_per_100": 43.81006218202374,
+            "missed_per_100": 3.335217637083098
+          },
+          "DFW|arr": {
+            "n": 913,
+            "pr_auc": 0.21184096318490436,
+            "roc_auc": 0.5959392554508235,
+            "brier": 0.1260959066365164,
+            "calendar_pr_auc": 0.17679111781382284,
+            "threshold": 0.11037123714858033,
+            "precision": 0.1791044776119403,
+            "recall": 0.7111111111111111,
+            "n_flights": 913,
+            "delayed_per_100": 14.786418400876233,
+            "flagged_per_100": 58.707557502738226,
+            "caught_per_100": 10.514786418400876,
+            "false_alarms_per_100": 48.19277108433735,
+            "missed_per_100": 4.271631982475356
+          }
+        }
+      },
+      "best_iteration": {
+        "calendar": 14,
+        "cal_wx": 194,
+        "full": 195
+      },
+      "weather_lift": {
+        "pr_auc_model_vs_calendar": 0.053916465523317886,
+        "pr_auc_rel_pct": 25.840313601786647,
+        "roc_auc_model_vs_calendar": 0.037095943969359224,
+        "brier_model_vs_calendar": -0.003355805551325919,
+        "pr_auc_x_over_base_rate": 1.9889687832757048,
+        "pr_auc_calendar_x_over_base_rate": 1.5805497668812756,
+        "pure_weather_lift_cal_wx_vs_calendar_pr_auc": 0.05154816824954875
+      },
+      "bootstrap_95ci_by_test_day": {
+        "model": {
+          "pr_auc": [
+            0.2250179989353888,
+            0.29724815759167406
+          ],
+          "roc_auc": [
+            0.6544393443747555,
+            0.7005805310458686
+          ]
+        },
+        "calendar": {
+          "pr_auc": [
+            0.1813053943150296,
+            0.2373370122476671
+          ],
+          "roc_auc": [
+            0.6174994894019528,
+            0.6650513868684763
+          ]
+        },
+        "lift_pr_auc_model_minus_calendar": [
+          0.030386603258488607,
+          0.0780309129507821
+        ],
+        "lift_roc_auc_model_minus_calendar": [
+          0.020201752648069258,
+          0.05226689144448926
+        ]
+      },
+      "slices": {
+        "adverse_wx_12h(storm|prcp>=2.5mm|gust_xw>=25kt)": {
+          "n": 473,
+          "delayed_per_100": 29.38689217758985,
+          "pr_auc_model": 0.4447366828896755,
+          "pr_auc_calendar": 0.43538561119173635,
+          "recall_at_thr": 0.9568345323741008,
+          "precision_at_thr": 0.3367088607594937
+        },
+        "calm_wx_12h": {
+          "n": 5231,
+          "delayed_per_100": 11.737717453641752,
+          "pr_auc_model": 0.2118048239652204,
+          "pr_auc_calendar": 0.18431087593805054,
+          "recall_at_thr": 0.6237785016286646,
+          "precision_at_thr": 0.17361740707162285
+        },
+        "hour_block_6": {
+          "n": 1986,
+          "delayed_per_100": 8.1067472306143,
+          "pr_auc_model": 0.1334107783593782,
+          "pr_auc_calendar": 0.10674121695499797,
+          "recall_at_thr": 0.36024844720496896,
+          "precision_at_thr": 0.1589041095890411
+        },
+        "hour_block_12": {
+          "n": 1898,
+          "delayed_per_100": 13.066385669125394,
+          "pr_auc_model": 0.23299955847995935,
+          "pr_auc_calendar": 0.18411766895441012,
+          "recall_at_thr": 0.6774193548387096,
+          "precision_at_thr": 0.17891373801916932
+        },
+        "hour_block_18": {
+          "n": 1711,
+          "delayed_per_100": 19.696084161309177,
+          "pr_auc_model": 0.3366484072799512,
+          "pr_auc_calendar": 0.2527011353726507,
+          "recall_at_thr": 0.8605341246290801,
+          "precision_at_thr": 0.22870662460567823
+        }
+      },
+      "calibration_test_deciles": [
+        {
+          "mean_pred": 0.032037150542580065,
+          "obs_rate": 0.06304728546409807,
+          "n": 571
+        },
+        {
+          "mean_pred": 0.04732830676033055,
+          "obs_rate": 0.06842105263157895,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.06087609660744407,
+          "obs_rate": 0.07192982456140351,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.07596062658266557,
+          "obs_rate": 0.07880910683012259,
+          "n": 571
+        },
+        {
+          "mean_pred": 0.09262988187164908,
+          "obs_rate": 0.08947368421052632,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.11176932113808037,
+          "obs_rate": 0.12280701754385964,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.1385104705584187,
+          "obs_rate": 0.1190893169877408,
+          "n": 571
+        },
+        {
+          "mean_pred": 0.1763669659766362,
+          "obs_rate": 0.17543859649122806,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.23070525877529438,
+          "obs_rate": 0.20526315789473684,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.3275929570020619,
+          "obs_rate": 0.3257443082311734,
+          "n": 571
+        }
+      ],
+      "calibrator_val_cv_brier": {
+        "platt": 0.08074360514895003,
+        "isotonic": 0.08163684883264898
+      },
+      "generalisation": {
+        "train_ATL->test_ATL(in-airport reference)": {
+          "n_test": 3022,
+          "test_base_rate_per_100": 11.71409662475182,
+          "train_base_rate_per_100": 8.35640573873647,
+          "model": {
+            "n": 3022,
+            "pr_auc": 0.23531271846594473,
+            "roc_auc": 0.6773403552461057,
+            "brier": 0.09836210821873101
+          },
+          "calendar_only": {
+            "n": 3022,
+            "pr_auc": 0.2185894225802487,
+            "roc_auc": 0.6613801150272322,
+            "brier": 0.09957238947199204
+          }
+        },
+        "train_ATL->test_DFW": {
+          "n_test": 2682,
+          "test_base_rate_per_100": 14.876957494407158,
+          "train_base_rate_per_100": 8.35640573873647,
+          "model": {
+            "n": 2682,
+            "pr_auc": 0.264372593846745,
+            "roc_auc": 0.6329742446348021,
+            "brier": 0.12302082345583208
+          },
+          "calendar_only": {
+            "n": 2682,
+            "pr_auc": 0.22666564589233767,
+            "roc_auc": 0.6002868537967785,
+            "brier": 0.12575273953629212
+          }
+        },
+        "train_DFW->test_ATL": {
+          "n_test": 3022,
+          "test_base_rate_per_100": 11.71409662475182,
+          "train_base_rate_per_100": 12.251861042183624,
+          "model": {
+            "n": 3022,
+            "pr_auc": 0.23261181836357558,
+            "roc_auc": 0.6602720885320051,
+            "brier": 0.09875264042788928
+          },
+          "calendar_only": {
+            "n": 3022,
+            "pr_auc": 0.16724406798943198,
+            "roc_auc": 0.6000834328598412,
+            "brier": 0.10207432905737812
+          }
+        },
+        "train_DFW->test_DFW(in-airport reference)": {
+          "n_test": 2682,
+          "test_base_rate_per_100": 14.876957494407158,
+          "train_base_rate_per_100": 12.251861042183624,
+          "model": {
+            "n": 2682,
+            "pr_auc": 0.2701750647949946,
+            "roc_auc": 0.6570746840820842,
+            "brier": 0.1206887781675102
+          },
+          "calendar_only": {
+            "n": 2682,
+            "pr_auc": 0.2425792002267629,
+            "roc_auc": 0.6182467776976388,
+            "brier": 0.12318666809836332
+          }
+        }
+      },
+      "reference_probability_p_ref": 0.09159679118492946
+    },
+    "h6": {
+      "main_feature_set": "full",
+      "n_train": 14394,
+      "n_val": 5086,
+      "n_test": 5704,
+      "val_pr_auc_by_set": {
+        "calendar": 0.19574953054669333,
+        "cal_wx": 0.22937220161520996,
+        "full": 0.23102010121635091
+      },
+      "test": {
+        "base_rate": {
+          "p": 0.10101431151868834,
+          "pr_auc": 0.13201262272089762,
+          "roc_auc": 0.5,
+          "brier": 0.11554618546063657
+        },
+        "calendar_only": {
+          "n": 5704,
+          "pr_auc": 0.20865252006690052,
+          "roc_auc": 0.6415007847154437,
+          "brier": 0.11148029857390979
+        },
+        "calendar_plus_weather": {
+          "n": 5704,
+          "pr_auc": 0.2511506967137386,
+          "roc_auc": 0.6696895176984112,
+          "brier": 0.10892580413953766
+        },
+        "calendar_weather_congestion": {
+          "n": 5704,
+          "pr_auc": 0.24777501355215947,
+          "roc_auc": 0.6683204568114132,
+          "brier": 0.10896995147429826
+        },
+        "model": {
+          "n": 5704,
+          "pr_auc": 0.24777501355215947,
+          "roc_auc": 0.6683204568114132,
+          "brier": 0.10896995147429826
+        }
+      },
+      "operating_point": {
+        "model": {
+          "threshold": 0.10704498692610571,
+          "precision": 0.18937125748502995,
+          "recall": 0.6719787516600265,
+          "n_flights": 5704,
+          "delayed_per_100": 13.201262272089762,
+          "flagged_per_100": 46.84431977559607,
+          "caught_per_100": 8.870967741935484,
+          "false_alarms_per_100": 37.97335203366059,
+          "missed_per_100": 4.330294530154278
+        },
+        "calendar_only": {
+          "threshold": 0.09954878352797845,
+          "precision": 0.18044027426921688,
+          "recall": 0.6640106241699867,
+          "n_flights": 5704,
+          "delayed_per_100": 13.201262272089762,
+          "flagged_per_100": 48.57994389901823,
+          "caught_per_100": 8.76577840112202,
+          "false_alarms_per_100": 39.81416549789621,
+          "missed_per_100": 4.435483870967742
+        },
+        "base_rate_flag_all": {
+          "threshold": 0.5,
+          "precision": 0.13201262272089762,
+          "recall": 1.0,
+          "n_flights": 5704,
+          "delayed_per_100": 13.201262272089762,
+          "flagged_per_100": 100.0,
+          "caught_per_100": 13.201262272089762,
+          "false_alarms_per_100": 86.79873772791024,
+          "missed_per_100": 0.0
+        },
+        "top_risk_lists": {
+          "top_5pct": {
+            "model": {
+              "frac": 0.05,
+              "flagged_per_100": 5.014025245441795,
+              "precision": 0.35664335664335667,
+              "recall": 0.13545816733067728,
+              "lift_over_base_rate": 2.7015852673223195
+            },
+            "calendar_only": {
+              "frac": 0.05,
+              "flagged_per_100": 5.014025245441795,
+              "precision": 0.3111888111888112,
+              "recall": 0.11819389110225764,
+              "lift_over_base_rate": 2.3572655763890826
+            }
+          },
+          "top_10pct": {
+            "model": {
+              "frac": 0.1,
+              "flagged_per_100": 10.010518934081347,
+              "precision": 0.3117338003502627,
+              "recall": 0.23638778220451528,
+              "lift_over_base_rate": 2.3613938873810074
+            },
+            "calendar_only": {
+              "frac": 0.1,
+              "flagged_per_100": 10.010518934081347,
+              "precision": 0.2521891418563923,
+              "recall": 0.19123505976095617,
+              "lift_over_base_rate": 1.9103411223756463
+            }
+          }
+        },
+        "val_recall_at_threshold": 0.6,
+        "by_airport": {
+          "ATL": {
+            "n": 3022,
+            "pr_auc": 0.23599988840494823,
+            "roc_auc": 0.6776362877883092,
+            "brier": 0.09827861670941263,
+            "calendar_pr_auc": 0.204668943993481,
+            "base_rate_per_100": 11.71409662475182,
+            "op_threshold": 0.10704498692610571,
+            "op_precision": 0.1927710843373494,
+            "op_recall": 0.5875706214689266,
+            "op_n_flights": 3022,
+            "op_delayed_per_100": 11.71409662475182,
+            "op_flagged_per_100": 35.704831237591,
+            "op_caught_per_100": 6.8828590337524815,
+            "op_false_alarms_per_100": 28.821972203838516,
+            "op_missed_per_100": 4.831237590999338
+          },
+          "DFW": {
+            "n": 2682,
+            "pr_auc": 0.26341756205607014,
+            "roc_auc": 0.6546337372120621,
+            "brier": 0.12101663814822984,
+            "calendar_pr_auc": 0.2219844085977516,
+            "base_rate_per_100": 14.876957494407158,
+            "op_threshold": 0.10704498692610571,
+            "op_precision": 0.18706842435655996,
+            "op_recall": 0.7468671679197995,
+            "op_n_flights": 2682,
+            "op_delayed_per_100": 14.876957494407158,
+            "op_flagged_per_100": 59.395973154362416,
+            "op_caught_per_100": 11.11111111111111,
+            "op_false_alarms_per_100": 48.2848620432513,
+            "op_missed_per_100": 3.7658463832960476
+          }
+        },
+        "by_airport_side": {
+          "ATL|dep": {
+            "n": 1757,
+            "pr_auc": 0.2760842250685992,
+            "roc_auc": 0.7014921706560002,
+            "brier": 0.10540425199147264,
+            "calendar_pr_auc": 0.24074991022702918,
+            "threshold": 0.10704498692610571,
+            "precision": 0.22653721682847897,
+            "recall": 0.6194690265486725,
+            "n_flights": 1757,
+            "delayed_per_100": 12.8628343767786,
+            "flagged_per_100": 35.173591348890156,
+            "caught_per_100": 7.968127490039841,
+            "false_alarms_per_100": 27.20546385885031,
+            "missed_per_100": 4.894706886738759
+          },
+          "ATL|arr": {
+            "n": 1265,
+            "pr_auc": 0.19386460505683178,
+            "roc_auc": 0.6411197229551451,
+            "brier": 0.0883815881002589,
+            "calendar_pr_auc": 0.16751207285837688,
+            "threshold": 0.10704498692610571,
+            "precision": 0.1475054229934924,
+            "recall": 0.53125,
+            "n_flights": 1265,
+            "delayed_per_100": 10.118577075098814,
+            "flagged_per_100": 36.44268774703557,
+            "caught_per_100": 5.375494071146245,
+            "false_alarms_per_100": 31.067193675889328,
+            "missed_per_100": 4.743083003952569
+          },
+          "DFW|dep": {
+            "n": 1769,
+            "pr_auc": 0.28619912212546944,
+            "roc_auc": 0.6873263364542435,
+            "brier": 0.11864311431041345,
+            "calendar_pr_auc": 0.2374105461788067,
+            "threshold": 0.10704498692610571,
+            "precision": 0.2,
+            "recall": 0.7803030303030303,
+            "n_flights": 1769,
+            "delayed_per_100": 14.92368569813454,
+            "flagged_per_100": 58.22498586772188,
+            "caught_per_100": 11.644997173544375,
+            "false_alarms_per_100": 46.5799886941775,
+            "missed_per_100": 3.278688524590164
+          },
+          "DFW|arr": {
+            "n": 913,
+            "pr_auc": 0.22759178384882334,
+            "roc_auc": 0.5867609254498714,
+            "brier": 0.12561550306509423,
+            "calendar_pr_auc": 0.17679111781382284,
+            "threshold": 0.10704498692610571,
+            "precision": 0.16341030195381884,
+            "recall": 0.6814814814814815,
+            "n_flights": 913,
+            "delayed_per_100": 14.786418400876233,
+            "flagged_per_100": 61.66484118291347,
+            "caught_per_100": 10.076670317634173,
+            "false_alarms_per_100": 51.5881708652793,
+            "missed_per_100": 4.709748083242059
+          }
+        }
+      },
+      "best_iteration": {
+        "calendar": 14,
+        "cal_wx": 123,
+        "full": 137
+      },
+      "weather_lift": {
+        "pr_auc_model_vs_calendar": 0.03912249348525895,
+        "pr_auc_rel_pct": 18.750069959718218,
+        "roc_auc_model_vs_calendar": 0.02681967209596947,
+        "brier_model_vs_calendar": -0.0025103470996115235,
+        "pr_auc_x_over_base_rate": 1.8769039539196781,
+        "pr_auc_calendar_x_over_base_rate": 1.5805497668812756,
+        "pure_weather_lift_cal_wx_vs_calendar_pr_auc": 0.042498176646838054
+      },
+      "bootstrap_95ci_by_test_day": {
+        "model": {
+          "pr_auc": [
+            0.21456238233673336,
+            0.28199632452750056
+          ],
+          "roc_auc": [
+            0.6441659848151515,
+            0.6914292900289307
+          ]
+        },
+        "calendar": {
+          "pr_auc": [
+            0.1813053943150296,
+            0.2373370122476671
+          ],
+          "roc_auc": [
+            0.6174994894019528,
+            0.6650513868684763
+          ]
+        },
+        "lift_pr_auc_model_minus_calendar": [
+          0.01715298670066136,
+          0.059135560661436444
+        ],
+        "lift_roc_auc_model_minus_calendar": [
+          0.012421049800110637,
+          0.04137377211906681
+        ]
+      },
+      "slices": {
+        "adverse_wx_12h(storm|prcp>=2.5mm|gust_xw>=25kt)": {
+          "n": 429,
+          "delayed_per_100": 21.91142191142191,
+          "pr_auc_model": 0.44093173057950474,
+          "pr_auc_calendar": 0.37147323200279747,
+          "recall_at_thr": 0.8936170212765957,
+          "precision_at_thr": 0.28187919463087246
+        },
+        "calm_wx_12h": {
+          "n": 5275,
+          "delayed_per_100": 12.492890995260664,
+          "pr_auc_model": 0.21921712470056906,
+          "pr_auc_calendar": 0.1958968195042074,
+          "recall_at_thr": 0.6403641881638846,
+          "precision_at_thr": 0.17775905644481887
+        },
+        "hour_block_6": {
+          "n": 1986,
+          "delayed_per_100": 8.1067472306143,
+          "pr_auc_model": 0.13801173358959223,
+          "pr_auc_calendar": 0.10674121695499797,
+          "recall_at_thr": 0.36645962732919257,
+          "precision_at_thr": 0.15608465608465608
+        },
+        "hour_block_12": {
+          "n": 1898,
+          "delayed_per_100": 13.066385669125394,
+          "pr_auc_model": 0.21034935183381967,
+          "pr_auc_calendar": 0.18411766895441012,
+          "recall_at_thr": 0.6330645161290323,
+          "precision_at_thr": 0.16168898043254376
+        },
+        "hour_block_18": {
+          "n": 1711,
+          "delayed_per_100": 19.696084161309177,
+          "pr_auc_model": 0.3155587365828878,
+          "pr_auc_calendar": 0.2527011353726507,
+          "recall_at_thr": 0.857566765578635,
+          "precision_at_thr": 0.22666666666666666
+        }
+      },
+      "calibration_test_deciles": [
+        {
+          "mean_pred": 0.036104694010514665,
+          "obs_rate": 0.06129597197898424,
+          "n": 571
+        },
+        {
+          "mean_pred": 0.04991339177253263,
+          "obs_rate": 0.06666666666666667,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.06227744810791882,
+          "obs_rate": 0.09298245614035087,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.07622437439954344,
+          "obs_rate": 0.07005253940455342,
+          "n": 571
+        },
+        {
+          "mean_pred": 0.09226571411224592,
+          "obs_rate": 0.10877192982456141,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.11104488115758575,
+          "obs_rate": 0.11228070175438597,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.13424480023784083,
+          "obs_rate": 0.12784588441331,
+          "n": 571
+        },
+        {
+          "mean_pred": 0.16661149059532238,
+          "obs_rate": 0.1631578947368421,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.21786117410242228,
+          "obs_rate": 0.20526315789473684,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.3091678935409335,
+          "obs_rate": 0.3117338003502627,
+          "n": 571
+        }
+      ],
+      "calibrator_val_cv_brier": {
+        "platt": 0.08149305833430251,
+        "isotonic": 0.08226148324930549
+      },
+      "generalisation": {
+        "train_ATL->test_ATL(in-airport reference)": {
+          "n_test": 3022,
+          "test_base_rate_per_100": 11.71409662475182,
+          "train_base_rate_per_100": 8.35640573873647,
+          "model": {
+            "n": 3022,
+            "pr_auc": 0.22284709714521767,
+            "roc_auc": 0.6761841536858689,
+            "brier": 0.09937722946993145
+          },
+          "calendar_only": {
+            "n": 3022,
+            "pr_auc": 0.2185894225802487,
+            "roc_auc": 0.6613801150272322,
+            "brier": 0.09957238947199204
+          }
+        },
+        "train_ATL->test_DFW": {
+          "n_test": 2682,
+          "test_base_rate_per_100": 14.876957494407158,
+          "train_base_rate_per_100": 8.35640573873647,
+          "model": {
+            "n": 2682,
+            "pr_auc": 0.2243095429415847,
+            "roc_auc": 0.6235068617667691,
+            "brier": 0.12526036113295802
+          },
+          "calendar_only": {
+            "n": 2682,
+            "pr_auc": 0.22666564589233767,
+            "roc_auc": 0.6002868537967785,
+            "brier": 0.12575273953629212
+          }
+        },
+        "train_DFW->test_ATL": {
+          "n_test": 3022,
+          "test_base_rate_per_100": 11.71409662475182,
+          "train_base_rate_per_100": 12.251861042183624,
+          "model": {
+            "n": 3022,
+            "pr_auc": 0.20751398628649398,
+            "roc_auc": 0.6423070244538748,
+            "brier": 0.10007913177380102
+          },
+          "calendar_only": {
+            "n": 3022,
+            "pr_auc": 0.16724406798943198,
+            "roc_auc": 0.6000834328598412,
+            "brier": 0.10207432905737812
+          }
+        },
+        "train_DFW->test_DFW(in-airport reference)": {
+          "n_test": 2682,
+          "test_base_rate_per_100": 14.876957494407158,
+          "train_base_rate_per_100": 12.251861042183624,
+          "model": {
+            "n": 2682,
+            "pr_auc": 0.2600195235317006,
+            "roc_auc": 0.6536912803252107,
+            "brier": 0.12125645528500542
+          },
+          "calendar_only": {
+            "n": 2682,
+            "pr_auc": 0.2425792002267629,
+            "roc_auc": 0.6182467776976388,
+            "brier": 0.12318666809836332
+          }
+        }
+      },
+      "reference_probability_p_ref": 0.09379353381262116
+    },
+    "h12": {
+      "main_feature_set": "cal_wx",
+      "n_train": 14394,
+      "n_val": 5086,
+      "n_test": 5704,
+      "val_pr_auc_by_set": {
+        "calendar": 0.19574953054669333,
+        "cal_wx": 0.22587767644196022,
+        "full": 0.21796541648110046
+      },
+      "test": {
+        "base_rate": {
+          "p": 0.10101431151868834,
+          "pr_auc": 0.13201262272089762,
+          "roc_auc": 0.5,
+          "brier": 0.11554618546063657
+        },
+        "calendar_only": {
+          "n": 5704,
+          "pr_auc": 0.20865252006690052,
+          "roc_auc": 0.6415007847154437,
+          "brier": 0.11148029857390979
+        },
+        "calendar_plus_weather": {
+          "n": 5704,
+          "pr_auc": 0.24220243035759464,
+          "roc_auc": 0.6718088260973476,
+          "brier": 0.10914813757288884
+        },
+        "calendar_weather_congestion": {
+          "n": 5704,
+          "pr_auc": 0.2382772052804686,
+          "roc_auc": 0.6731647435706578,
+          "brier": 0.10914213679797026
+        },
+        "model": {
+          "n": 5704,
+          "pr_auc": 0.24220243035759464,
+          "roc_auc": 0.6718088260973476,
+          "brier": 0.10914813757288884
+        }
+      },
+      "operating_point": {
+        "model": {
+          "threshold": 0.10643293498625772,
+          "precision": 0.18731454005934717,
+          "recall": 0.6706507304116865,
+          "n_flights": 5704,
+          "delayed_per_100": 13.201262272089762,
+          "flagged_per_100": 47.26507713884993,
+          "caught_per_100": 8.85343618513324,
+          "false_alarms_per_100": 38.41164095371669,
+          "missed_per_100": 4.3478260869565215
+        },
+        "calendar_only": {
+          "threshold": 0.09954878352797845,
+          "precision": 0.18044027426921688,
+          "recall": 0.6640106241699867,
+          "n_flights": 5704,
+          "delayed_per_100": 13.201262272089762,
+          "flagged_per_100": 48.57994389901823,
+          "caught_per_100": 8.76577840112202,
+          "false_alarms_per_100": 39.81416549789621,
+          "missed_per_100": 4.435483870967742
+        },
+        "base_rate_flag_all": {
+          "threshold": 0.5,
+          "precision": 0.13201262272089762,
+          "recall": 1.0,
+          "n_flights": 5704,
+          "delayed_per_100": 13.201262272089762,
+          "flagged_per_100": 100.0,
+          "caught_per_100": 13.201262272089762,
+          "false_alarms_per_100": 86.79873772791024,
+          "missed_per_100": 0.0
+        },
+        "top_risk_lists": {
+          "top_5pct": {
+            "model": {
+              "frac": 0.05,
+              "flagged_per_100": 5.014025245441795,
+              "precision": 0.3321678321678322,
+              "recall": 0.12616201859229748,
+              "lift_over_base_rate": 2.516182356819807
+            },
+            "calendar_only": {
+              "frac": 0.05,
+              "flagged_per_100": 5.014025245441795,
+              "precision": 0.3111888111888112,
+              "recall": 0.11819389110225764,
+              "lift_over_base_rate": 2.3572655763890826
+            }
+          },
+          "top_10pct": {
+            "model": {
+              "frac": 0.1,
+              "flagged_per_100": 10.010518934081347,
+              "precision": 0.29597197898423816,
+              "recall": 0.2244355909694555,
+              "lift_over_base_rate": 2.241997567232529
+            },
+            "calendar_only": {
+              "frac": 0.1,
+              "flagged_per_100": 10.010518934081347,
+              "precision": 0.2521891418563923,
+              "recall": 0.19123505976095617,
+              "lift_over_base_rate": 1.9103411223756463
+            }
+          }
+        },
+        "val_recall_at_threshold": 0.6,
+        "by_airport": {
+          "ATL": {
+            "n": 3022,
+            "pr_auc": 0.23887434588119977,
+            "roc_auc": 0.7014268289584021,
+            "brier": 0.09770806630664107,
+            "calendar_pr_auc": 0.204668943993481,
+            "base_rate_per_100": 11.71409662475182,
+            "op_threshold": 0.10643293498625772,
+            "op_precision": 0.20599250936329588,
+            "op_recall": 0.6214689265536724,
+            "op_n_flights": 3022,
+            "op_delayed_per_100": 11.71409662475182,
+            "op_flagged_per_100": 35.34083388484447,
+            "op_caught_per_100": 7.27994705493051,
+            "op_false_alarms_per_100": 28.060886829913965,
+            "op_missed_per_100": 4.434149569821311
+          },
+          "DFW": {
+            "n": 2682,
+            "pr_auc": 0.2561822447980676,
+            "roc_auc": 0.6394451964339232,
+            "brier": 0.12203847887288911,
+            "calendar_pr_auc": 0.2219844085977516,
+            "base_rate_per_100": 14.876957494407158,
+            "op_threshold": 0.10643293498625772,
+            "op_precision": 0.17506142506142505,
+            "op_recall": 0.7142857142857143,
+            "op_n_flights": 2682,
+            "op_delayed_per_100": 14.876957494407158,
+            "op_flagged_per_100": 60.70096942580164,
+            "op_caught_per_100": 10.626398210290828,
+            "op_false_alarms_per_100": 50.074571215510815,
+            "op_missed_per_100": 4.250559284116331
+          }
+        },
+        "by_airport_side": {
+          "ATL|dep": {
+            "n": 1757,
+            "pr_auc": 0.28022357871880316,
+            "roc_auc": 0.7287792697236464,
+            "brier": 0.10480532437738098,
+            "calendar_pr_auc": 0.24074991022702918,
+            "threshold": 0.10643293498625772,
+            "precision": 0.24271844660194175,
+            "recall": 0.6637168141592921,
+            "n_flights": 1757,
+            "delayed_per_100": 12.8628343767786,
+            "flagged_per_100": 35.173591348890156,
+            "caught_per_100": 8.537279453614115,
+            "false_alarms_per_100": 26.636311895276037,
+            "missed_per_100": 4.325554923164485
+          },
+          "ATL|arr": {
+            "n": 1265,
+            "pr_auc": 0.1902276248804037,
+            "roc_auc": 0.6576311015831134,
+            "brier": 0.08785045173724187,
+            "calendar_pr_auc": 0.16751207285837688,
+            "threshold": 0.10643293498625772,
+            "precision": 0.15555555555555556,
+            "recall": 0.546875,
+            "n_flights": 1265,
+            "delayed_per_100": 10.118577075098814,
+            "flagged_per_100": 35.573122529644266,
+            "caught_per_100": 5.533596837944664,
+            "false_alarms_per_100": 30.039525691699605,
+            "missed_per_100": 4.58498023715415
+          },
+          "DFW|dep": {
+            "n": 1769,
+            "pr_auc": 0.2814894154818967,
+            "roc_auc": 0.6666465317628107,
+            "brier": 0.12009170772304421,
+            "calendar_pr_auc": 0.2374105461788067,
+            "threshold": 0.10643293498625772,
+            "precision": 0.18567389255419417,
+            "recall": 0.7462121212121212,
+            "n_flights": 1769,
+            "delayed_per_100": 14.92368569813454,
+            "flagged_per_100": 59.97738835500282,
+            "caught_per_100": 11.13623516110797,
+            "false_alarms_per_100": 48.841153193894854,
+            "missed_per_100": 3.7874505370265688
+          },
+          "DFW|arr": {
+            "n": 913,
+            "pr_auc": 0.20978859130931626,
+            "roc_auc": 0.5829239264971913,
+            "brier": 0.12581048124317998,
+            "calendar_pr_auc": 0.17679111781382284,
+            "threshold": 0.10643293498625772,
+            "precision": 0.15520282186948853,
+            "recall": 0.6518518518518519,
+            "n_flights": 913,
+            "delayed_per_100": 14.786418400876233,
+            "flagged_per_100": 62.102957283680176,
+            "caught_per_100": 9.63855421686747,
+            "false_alarms_per_100": 52.46440306681271,
+            "missed_per_100": 5.147864184008762
+          }
+        }
+      },
+      "best_iteration": {
+        "calendar": 14,
+        "cal_wx": 124,
+        "full": 125
+      },
+      "weather_lift": {
+        "pr_auc_model_vs_calendar": 0.033549910290694124,
+        "pr_auc_rel_pct": 16.079321869650553,
+        "roc_auc_model_vs_calendar": 0.030308041381903905,
+        "brier_model_vs_calendar": -0.0023321610010209465,
+        "pr_auc_x_over_base_rate": 1.8346914512081274,
+        "pr_auc_calendar_x_over_base_rate": 1.5805497668812756,
+        "pure_weather_lift_cal_wx_vs_calendar_pr_auc": 0.033549910290694124
+      },
+      "bootstrap_95ci_by_test_day": {
+        "model": {
+          "pr_auc": [
+            0.2087350397572827,
+            0.2780547267881492
+          ],
+          "roc_auc": [
+            0.6458989783637913,
+            0.7004099993244901
+          ]
+        },
+        "calendar": {
+          "pr_auc": [
+            0.1813053943150296,
+            0.2373370122476671
+          ],
+          "roc_auc": [
+            0.6174994894019528,
+            0.6650513868684763
+          ]
+        },
+        "lift_pr_auc_model_minus_calendar": [
+          0.017679099915907402,
+          0.05338932524401655
+        ],
+        "lift_roc_auc_model_minus_calendar": [
+          0.015472364237594363,
+          0.04342592538948609
+        ]
+      },
+      "slices": {
+        "adverse_wx_12h(storm|prcp>=2.5mm|gust_xw>=25kt)": {
+          "n": 465,
+          "delayed_per_100": 16.344086021505376,
+          "pr_auc_model": 0.34312592927454455,
+          "pr_auc_calendar": 0.3153264839319169,
+          "recall_at_thr": 0.6710526315789473,
+          "precision_at_thr": 0.22869955156950672
+        },
+        "calm_wx_12h": {
+          "n": 5239,
+          "delayed_per_100": 12.922313418591333,
+          "pr_auc_model": 0.23352037081799623,
+          "pr_auc_calendar": 0.20361779773254873,
+          "recall_at_thr": 0.670605612998523,
+          "precision_at_thr": 0.18358269308532146
+        },
+        "hour_block_6": {
+          "n": 1986,
+          "delayed_per_100": 8.1067472306143,
+          "pr_auc_model": 0.1273946700936992,
+          "pr_auc_calendar": 0.10674121695499797,
+          "recall_at_thr": 0.2795031055900621,
+          "precision_at_thr": 0.1271186440677966
+        },
+        "hour_block_12": {
+          "n": 1898,
+          "delayed_per_100": 13.066385669125394,
+          "pr_auc_model": 0.2117327209099391,
+          "pr_auc_calendar": 0.18411766895441012,
+          "recall_at_thr": 0.6612903225806451,
+          "precision_at_thr": 0.1671763506625892
+        },
+        "hour_block_18": {
+          "n": 1711,
+          "delayed_per_100": 19.696084161309177,
+          "pr_auc_model": 0.3022406931078488,
+          "pr_auc_calendar": 0.2527011353726507,
+          "recall_at_thr": 0.8753709198813057,
+          "precision_at_thr": 0.22163786626596543
+        }
+      },
+      "calibration_test_deciles": [
+        {
+          "mean_pred": 0.037287371571602106,
+          "obs_rate": 0.050788091068301226,
+          "n": 571
+        },
+        {
+          "mean_pred": 0.05263299178020302,
+          "obs_rate": 0.05263157894736842,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.06620348923770841,
+          "obs_rate": 0.07368421052631578,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.0794144381595348,
+          "obs_rate": 0.1085814360770578,
+          "n": 571
+        },
+        {
+          "mean_pred": 0.094093735990079,
+          "obs_rate": 0.11052631578947368,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.11082293344968512,
+          "obs_rate": 0.12631578947368421,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.1328361746268338,
+          "obs_rate": 0.1138353765323993,
+          "n": 571
+        },
+        {
+          "mean_pred": 0.16304044642638538,
+          "obs_rate": 0.16140350877192983,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.2142387616340744,
+          "obs_rate": 0.22631578947368422,
+          "n": 570
+        },
+        {
+          "mean_pred": 0.3051659429531565,
+          "obs_rate": 0.29597197898423816,
+          "n": 571
+        }
+      ],
+      "calibrator_val_cv_brier": {
+        "platt": 0.08153682290408858,
+        "isotonic": 0.08184894700670116
+      },
+      "generalisation": {
+        "train_ATL->test_ATL(in-airport reference)": {
+          "n_test": 3022,
+          "test_base_rate_per_100": 11.71409662475182,
+          "train_base_rate_per_100": 8.35640573873647,
+          "model": {
+            "n": 3022,
+            "pr_auc": 0.23965486332086045,
+            "roc_auc": 0.6930729550478998,
+            "brier": 0.09817389357085389
+          },
+          "calendar_only": {
+            "n": 3022,
+            "pr_auc": 0.2185894225802487,
+            "roc_auc": 0.6613801150272322,
+            "brier": 0.09957238947199204
+          }
+        },
+        "train_ATL->test_DFW": {
+          "n_test": 2682,
+          "test_base_rate_per_100": 14.876957494407158,
+          "train_base_rate_per_100": 8.35640573873647,
+          "model": {
+            "n": 2682,
+            "pr_auc": 0.23498490171403905,
+            "roc_auc": 0.6152591289876026,
+            "brier": 0.12407598219948483
+          },
+          "calendar_only": {
+            "n": 2682,
+            "pr_auc": 0.22666564589233767,
+            "roc_auc": 0.6002868537967785,
+            "brier": 0.12575273953629212
+          }
+        },
+        "train_DFW->test_ATL": {
+          "n_test": 3022,
+          "test_base_rate_per_100": 11.71409662475182,
+          "train_base_rate_per_100": 12.251861042183624,
+          "model": {
+            "n": 3022,
+            "pr_auc": 0.18295900797251896,
+            "roc_auc": 0.6334232248282639,
+            "brier": 0.10110974910347398
+          },
+          "calendar_only": {
+            "n": 3022,
+            "pr_auc": 0.16724406798943198,
+            "roc_auc": 0.6000834328598412,
+            "brier": 0.10207432905737812
+          }
+        },
+        "train_DFW->test_DFW(in-airport reference)": {
+          "n_test": 2682,
+          "test_base_rate_per_100": 14.876957494407158,
+          "train_base_rate_per_100": 12.251861042183624,
+          "model": {
+            "n": 2682,
+            "pr_auc": 0.23498409053980113,
+            "roc_auc": 0.6344310184133132,
+            "brier": 0.12310944116453534
+          },
+          "calendar_only": {
+            "n": 2682,
+            "pr_auc": 0.2425792002267629,
+            "roc_auc": 0.6182467776976388,
+            "brier": 0.12318666809836332
+          }
+        }
+      },
+      "reference_probability_p_ref": 0.09646275490647298
+    }
+  },
+  "flat": {
+    "h3_model_pr_auc": 0.2625689855902184,
+    "h3_model_roc_auc": 0.6785967286848029,
+    "h3_model_brier": 0.10812449302258387,
+    "h3_calendar_pr_auc": 0.20865252006690052,
+    "h3_calendar_roc_auc": 0.6415007847154437,
+    "h3_calendar_brier": 0.11148029857390979,
+    "h3_base_rate_pr_auc": 0.13201262272089762,
+    "h3_base_rate_roc_auc": 0.5,
+    "h3_base_rate_brier": 0.11554618546063657,
+    "h3_precision_at_recall60": 0.19838523644752018,
+    "h3_recall_at_recall60_thr": 0.6852589641434262,
+    "h3_weather_lift_pr_auc": 0.053916465523317886,
+    "h6_model_pr_auc": 0.24777501355215947,
+    "h6_model_roc_auc": 0.6683204568114132,
+    "h6_model_brier": 0.10896995147429826,
+    "h6_calendar_pr_auc": 0.20865252006690052,
+    "h6_calendar_roc_auc": 0.6415007847154437,
+    "h6_calendar_brier": 0.11148029857390979,
+    "h6_base_rate_pr_auc": 0.13201262272089762,
+    "h6_base_rate_roc_auc": 0.5,
+    "h6_base_rate_brier": 0.11554618546063657,
+    "h6_precision_at_recall60": 0.18937125748502995,
+    "h6_recall_at_recall60_thr": 0.6719787516600265,
+    "h6_weather_lift_pr_auc": 0.03912249348525895,
+    "h12_model_pr_auc": 0.24220243035759464,
+    "h12_model_roc_auc": 0.6718088260973476,
+    "h12_model_brier": 0.10914813757288884,
+    "h12_calendar_pr_auc": 0.20865252006690052,
+    "h12_calendar_roc_auc": 0.6415007847154437,
+    "h12_calendar_brier": 0.11148029857390979,
+    "h12_base_rate_pr_auc": 0.13201262272089762,
+    "h12_base_rate_roc_auc": 0.5,
+    "h12_base_rate_brier": 0.11554618546063657,
+    "h12_precision_at_recall60": 0.18731454005934717,
+    "h12_recall_at_recall60_thr": 0.6706507304116865,
+    "h12_weather_lift_pr_auc": 0.033549910290694124
+  }
+}

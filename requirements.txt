@@ -1,0 +1,8 @@
+pandas>=2.1
+numpy>=1.26
+pyarrow>=14
+scikit-learn>=1.4
+lightgbm>=4.3
+shap>=0.45
+streamlit>=1.35
+plotly>=5.20

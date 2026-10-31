@@ -12,3 +12,6 @@ venv/
 .DS_Store
 # fitted model bundles are rebuilt by the scripts
 outputs/*.joblib
+
+# per-user dashboard decision log
+outputs/decision_log.csv

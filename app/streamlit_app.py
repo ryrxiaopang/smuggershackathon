@@ -45,10 +45,12 @@ FEATURE_WORDS = {
     "temp_last": "temperature now", "pres_last": "air pressure now", "coco_last": "weather type now",
 }
 DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+MODEL_NAMES = {"base_rate": "Guess the average", "calendar_only": "Timetable only", "calendar_plus_weather": "Timetable + weather",
+               "calendar_weather_congestion": "+ earlier delays today", "model": "Final model"}
 WX_COLS = {"local": "time (local)", "obs_utc": "time (UTC)", "drct": "wind from (°)", "wspd_kt": "wind (kt)",
            "gust_kt": "gust (kt)", "tailwind_kt": "tailwind (kt)", "prcp_mm": "rain (mm)", "wx_group": "weather",
            "wind_source": "wind source"}
-EVIDENCE_COLS = {"signal": "what was checked", "value": "value", "unit": "unit", "local": "time (local)",
+EVIDENCE_COLS = {"signal": "what was checked", "value": "value", "local": "time (local)",
                  "obs_or_valid_time": "time (UTC)", "source": "source", "threshold": "rule"}
 
 
@@ -292,10 +294,33 @@ def show_obj(obj):
         st.json(obj, expanded=False)
 
 
+def _plain_value(v, unit):
+    """0.47 + 'share of flights' -> '47 of 100 flights'; 18.2 + 'kt' -> '18 kt'."""
+    if v is None or v == "" or (isinstance(v, float) and np.isnan(v)):
+        return ""
+    if isinstance(v, bool):
+        return "yes" if v else "no"
+    if isinstance(v, (int, float)):
+        if unit == "share of flights":
+            return f"{v * 100:.0f} of 100 flights"
+        if unit in ("share", "prob"):
+            return f"{v:.0%}"
+        if unit == "kt":
+            return f"{v:.0f} kt"
+        if unit == "deg":
+            return f"{v:.0f}°"
+        if unit == "mm":
+            return f"{v:.1f} mm"
+        return f"{v:g} {unit}".strip()
+    return f"{v} {unit}".strip() if unit and unit not in ("deg",) else (f"{v}°" if unit == "deg" and str(v)[:1].isdigit() else str(v))
+
+
 def evidence_df(ev, tz):
     if not ev:
         return pd.DataFrame()
     d = pd.DataFrame(ev)
+    d["value"] = [_plain_value(v, u) for v, u in zip(d["value"], d["unit"])]
+    d = d.drop(columns="unit")
     t = pd.to_datetime(d["obs_or_valid_time"].str.replace("Z", "", regex=False), errors="coerce")
     d.insert(d.columns.get_loc("obs_or_valid_time") + 1, "local",
              t.dt.tz_localize("UTC").dt.tz_convert(tz).dt.strftime("%m-%d %H:%M").fillna(""))
@@ -378,6 +403,7 @@ def render_delay(name, m, horizon):
         st.info("No by_horizon.*.test entries found.")
         return
     L = pd.DataFrame(long)
+    L["model"] = L["model"].map(lambda x: MODEL_NAMES.get(x, x))
     order = list(dict.fromkeys(L["model"]))
     key = f"h{horizon}" if f"h{horizon}" in bh else sorted(bh, key=hnum)[0]
     test = bh[key].get("test", {})
@@ -388,12 +414,15 @@ def render_delay(name, m, horizon):
     cur = L[L["horizon_h"] == hnum(key)].drop(columns="horizon_h")
     c1, c2 = st.columns(2)
     with c1:
-        st.dataframe(cur.round(4), hide_index=True, width="stretch")
+        show = cur.drop(columns=[c for c in ("p",) if c in cur.columns]).round(3)
+        st.dataframe(show.rename(columns={"model": "model", "pr_auc": "PR-AUC", "roc_auc": "ROC-AUC", "brier": "Brier",
+                                          "n": "flights"}), hide_index=True, width="stretch")
         if "pr_auc" in cur.columns:
-            fig = px.bar(cur, x="model", y="pr_auc", category_orders={"model": order}, height=280)
+            fig = px.bar(cur, x="model", y="pr_auc", category_orders={"model": order}, height=300,
+                         color_discrete_sequence=["#6366f1"])
             if isinstance(br, (int, float)):
                 fig.add_hline(y=br, line_dash="dot", line_color="grey")
-            fig.update_layout(margin=dict(l=10, r=10, t=10, b=10), xaxis_title="")
+            fig.update_layout(margin=dict(l=10, r=10, t=10, b=10), xaxis_title="", yaxis_title="PR-AUC (higher is better)")
             st.plotly_chart(fig, width="stretch")
     with c2:
         if "pr_auc" in L.columns:
@@ -693,7 +722,7 @@ with tab_fc:
     c4.metric(f"Flights likely >45 min late (next {horizon}h)", f"{nflag} of {0 if fw is None else len(fw)}",
               help=f"Flights with at least a {thr:.0%} chance of a >45-minute delay. The data is a sample (~6 ATL arrivals/day), not the full schedule.")
 
-    left, right = st.columns([3, 2])
+    left = st.container()
     with left:
         st.markdown(f"**Expected disruption per {B:g}-hour block** · bars = forecast, coloured by alert level; "
                     f"green band = normal for {ap}")
@@ -706,9 +735,10 @@ with tab_fc:
             if not past.empty:
                 t = local(past["block_start_utc"], tz) + pd.Timedelta(hours=B / 2)
                 xs += list(t)
-                fig.add_trace(go.Scatter(x=t, y=past["stress_rate_actual"] * 100, mode="markers+lines",
-                                         name="what happened (last 24h)", marker=dict(color="grey"),
-                                         line=dict(color="lightgrey"), hovertemplate="%{y:.0f} of 100 flights disrupted<extra>what happened</extra>"))
+                fig.add_trace(go.Bar(x=t, y=past["stress_rate_actual"] * 100, width=B * 3600 * 1000 * 0.85,
+                                     name="what happened (last 24h)", marker=dict(color="rgba(148,163,184,.45)",
+                                     line=dict(color="rgba(148,163,184,.9)", width=1)),
+                                     hovertemplate="%{y:.0f} of 100 flights disrupted<extra>what happened</extra>"))
         if bw is not None and not bw.empty:
             t = local(bw["block_start_utc"], tz) + pd.Timedelta(hours=B / 2)
             xs += list(t)
@@ -740,17 +770,18 @@ with tab_fc:
         st.plotly_chart(fig, width="stretch")
         st.caption(f"Disrupted = ATC/airport-capacity or weather delay ≥15 min, or cancelled. Alert lines: {hist_src}.")
 
-    with right:
-        with st.container(border=True):
-            st.markdown(f"**The four checks behind the advice** {badge(overall)}", unsafe_allow_html=True)
-            st.caption("Simple, fixed rules applied to the forecasts and the latest weather reports, not AI. "
-                       "Open a check to see the exact values and times it used.")
-            for name, rec in sorted(recs, key=lambda x: -R._RANK[x[1].level]):
-                with st.expander(f"{LEVEL_ICON[rec.level]} {rec.level} · {name} — {rec.action}", expanded=rec.level != "NORMAL"):
-                    st.write(rec.reason)
-                    d = evidence_df(rec.evidence, tz)
-                    if not d.empty:
-                        st.dataframe(d, hide_index=True, width="stretch")
+    with st.container(border=True):
+        st.markdown(f"**The four checks behind the advice** {badge(overall)}", unsafe_allow_html=True)
+        st.caption("Simple, fixed rules applied to the forecasts and the latest weather reports, not AI. "
+                   "Open a check to see the exact values and times it used.")
+        grid = st.columns(2)
+        for i, (name, rec) in enumerate(sorted(recs, key=lambda x: -R._RANK[x[1].level])):
+            with grid[i % 2].expander(f"{LEVEL_ICON[rec.level]} {rec.level} · {name}", expanded=rec.level != "NORMAL"):
+                st.markdown(f"**{rec.action}**")
+                st.write(rec.reason)
+                d = evidence_df(rec.evidence, tz)
+                if not d.empty:
+                    st.dataframe(d, hide_index=True, width="stretch")
 
     st.markdown("**Weather reports for the last 24 hours** · dashed line = now; nothing to the right of it is used")
     end = now + pd.Timedelta(hours=horizon) if show_hind else now
@@ -779,8 +810,9 @@ with tab_fc:
         if "wspd_kt" in w.columns:
             fig.add_trace(go.Scatter(x=w["t"], y=w["wspd_kt"], mode="lines", name="wind speed", line=dict(color="#94a3b8"),
                                      customdata=w["obs"], hovertemplate=hov), 2, 1)
-        if "gust_kt" in w.columns:
-            fig.add_trace(go.Scatter(x=w["t"], y=w["gust_kt"], mode="lines", name="gust", line=dict(color="#f59e0b", dash="dot"),
+        if "wpgt_kt" in w.columns and w["wpgt_kt"].notna().any():
+            fig.add_trace(go.Scatter(x=w["t"], y=w["wpgt_kt"], mode="markers", name="gusts (when reported)",
+                                     marker=dict(color="#f59e0b", size=8, symbol="diamond"),
                                      customdata=w["obs"], hovertemplate=hov), 2, 1)
         fig.add_trace(go.Bar(x=w["t"], y=w["prcp_mm"], name="precip", marker_color="#38bdf8", customdata=w["obs"],
                              hovertemplate="%{y:.1f} mm · obs %{customdata}<extra></extra>"), 3, 1)
@@ -803,7 +835,7 @@ with tab_fc:
             fmt = lambda r, c: "" if pd.isna(r[c]) else (f"≤{r[c]:.0f} (upper bound)" if not r["wind_dir_known"] else f"{r[c]:.0f}")
             last["crosswind (kt)"] = last.apply(lambda r: fmt(r, "crosswind_kt"), axis=1)
             last["gust crosswind (kt)"] = last.apply(lambda r: fmt(r, "gust_crosswind_kt"), axis=1)
-            cols = [c for c in ["local", "obs_utc", "drct", "wspd_kt", "gust_kt", "crosswind (kt)", "gust crosswind (kt)",
+            cols = [c for c in ["local", "obs_utc", "wdir_deg", "wspd_kt", "wpgt_kt", "crosswind (kt)", "gust crosswind (kt)",
                                 "tailwind_kt", "prcp_mm", "wx_group", "wind_source"] if c in last.columns]
             with st.expander("Latest weather reports as a table"):
                 st.dataframe(last[cols].iloc[::-1].rename(columns=WX_COLS), hide_index=True, width="stretch")
@@ -821,6 +853,10 @@ with tab_fc:
             C.OUTPUTS.mkdir(parents=True, exist_ok=True)
             pd.DataFrame([row]).to_csv(C.DECISION_LOG, mode="a", header=not C.DECISION_LOG.exists(), index=False)
             st.success(f"Logged to {C.DECISION_LOG.relative_to(ROOT)}")
+    if C.DECISION_LOG.exists():
+        with st.expander("Decision log (latest first)"):
+            log = pd.read_csv(C.DECISION_LOG).iloc[::-1].head(10)
+            st.dataframe(log, hide_index=True, width="stretch")
 
 # ---------------- At-risk flights ----------------
 with tab_fl:
@@ -901,10 +937,38 @@ with tab_ev:
         "and the weather adds real value on top of the timetable.\n"
         "- Warnings get less accurate the further ahead you look (3h → 12h). Every number below shows this trade-off.\n"
         "- It does fail: see the failure cases at the bottom, each with a one-line reason.")
+    st.markdown("**Warning time vs accuracy** · the earlier the warning, the harder the job")
+    g1, g2 = st.columns(2)
+    if cm and cm.get("by_horizon"):
+        rows = [{"horizon": f"{hnum(k)}h", "h": hnum(k), "who": lbl, "err": v[f"{p}_rmse"] * 100}
+                for k, v in cm["by_horizon"].items()
+                for p, lbl in (("model", "Our forecast"), ("hist", "Historical average"), ("persist", "Same as last block"))]
+        H = pd.DataFrame(rows).sort_values("h")
+        fig = px.line(H, x="horizon", y="err", color="who", markers=True, height=300,
+                      color_discrete_map={"Our forecast": "#6366f1", "Historical average": "#10b981", "Same as last block": "#94a3b8"},
+                      title="Congestion forecast error (lower is better)")
+        fig.update_layout(margin=dict(l=10, r=10, t=40, b=10), yaxis_title="error, disrupted flights per 100",
+                          xaxis_title="warning time", legend_title="")
+        g1.plotly_chart(fig, width="stretch")
+    if dm and dm.get("by_horizon"):
+        rows = [{"horizon": f"{hnum(k)}h", "h": hnum(k), "who": lbl, "pr": v["test"][p]["pr_auc"]}
+                for k, v in dm["by_horizon"].items()
+                for p, lbl in (("model", "Our model"), ("calendar_only", "Timetable only"), ("base_rate", "Guess the average"))
+                if p in v.get("test", {})]
+        D = pd.DataFrame(rows).sort_values("h")
+        fig = px.line(D, x="horizon", y="pr", color="who", markers=True, height=300,
+                      color_discrete_map={"Our model": "#ec4899", "Timetable only": "#06b6d4", "Guess the average": "#94a3b8"},
+                      title="Finding >45-min delays: PR-AUC (higher is better)")
+        fig.update_layout(margin=dict(l=10, r=10, t=40, b=10), yaxis_title="PR-AUC", xaxis_title="warning time", legend_title="")
+        g2.plotly_chart(fig, width="stretch")
+
     st.divider()
     st.markdown("#### Full details")
+    st.caption("Every metric, baseline and chart behind the summary above. Open a section to see it.")
     for name, m in metrics.items():
-        with st.container(border=True):
+        title = ("Congestion forecast: all metrics" if is_cap_metrics(m) else
+                 "Flight delay model: all metrics" if is_delay_metrics(m) else name)
+        with st.expander(title):
             if "error" in m:
                 st.error(f"Could not read {name}: {m['error']}")
             elif is_delay_metrics(m):
@@ -913,38 +977,40 @@ with tab_ev:
                 render_capacity(name, m, horizon)
             else:
                 render_legacy(name, m)
-
-    st.markdown(f"### Recomputed from flight_risk_preds.parquet (horizon {horizon}h)")
+    recompute = st.expander(f"Double-check: delay metrics recomputed from the prediction file ({horizon}h)")
     ev = fl_all[fl_all["horizon_h"] == horizon] if "horizon_h" in fl_all.columns else fl_all
     if "actual_delay45" in ev.columns:
         ev = ev.dropna(subset=["actual_delay45"])
     if "actual_delay45" not in ev.columns or ev.empty:
-        st.info("No y_true in flight_risk_preds — cannot recompute.")
+        recompute.info("No y_true in flight_risk_preds — cannot recompute.")
     else:
-        thr = C.RULES["p_delay_threshold"]
-        rows = []
-        for a_, g in ev.groupby("airport"):
-            y, p = g["actual_delay45"].astype(int).to_numpy(), g["p_delay45"].to_numpy()
-            top = g.nlargest(max(1, int(len(g) * 0.1)), "p_delay45")["actual_delay45"].mean()
-            rows.append({"airport": a_, "flights": len(g), "actual >45 min per 100": round(100 * y.mean(), 1),
-                         "mean predicted per 100": round(100 * p.mean(), 1), f"flagged per 100 (p≥{thr})": round(100 * (p >= thr).mean(), 1),
-                         "AUC": round(safe_auc(y, p), 3), "PR-AUC": round(safe_ap(y, p), 3), "Brier": round(brier_score_loss(y, p), 4),
-                         "precision @ top 10%": round(top, 3), "lift @ top 10%": round(top / max(y.mean(), 1e-9), 2)})
-        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
-        st.caption("Airports compared only as rates per 100 flights (sample volumes differ).")
-        cb = ev.assign(bin=ev.groupby("airport")["p_delay45"].transform(lambda s: pd.qcut(s, 10, labels=False, duplicates="drop")))
-        cb = cb.groupby(["airport", "bin"]).agg(pred=("p_delay45", "mean"), obs=("actual_delay45", "mean"), n=("p_delay45", "size")).reset_index()
-        fig = go.Figure()
-        mx = float(max(cb["pred"].max(), cb["obs"].max())) * 1.05
-        fig.add_trace(go.Scatter(x=[0, mx], y=[0, mx], mode="lines", line=dict(dash="dash", color="grey"), name="perfect calibration"))
-        for a_, g in cb.groupby("airport"):
-            fig.add_trace(go.Scatter(x=g["pred"], y=g["obs"], mode="lines+markers", name=a_, customdata=g["n"],
-                                     hovertemplate="pred %{x:.2f} · obs %{y:.2f} · n=%{customdata}<extra></extra>"))
-        fig.update_layout(height=360, xaxis_title="mean predicted p(>45 min)", yaxis_title="observed rate",
-                          margin=dict(l=10, r=10, t=30, b=10), title="Reliability (deciles, recomputed)")
-        st.plotly_chart(fig, width="stretch")
+        with recompute:
+            thr = C.RULES["p_delay_threshold"]
+            rows = []
+            for a_, g in ev.groupby("airport"):
+                y, p = g["actual_delay45"].astype(int).to_numpy(), g["p_delay45"].to_numpy()
+                top = g.nlargest(max(1, int(len(g) * 0.1)), "p_delay45")["actual_delay45"].mean()
+                rows.append({"airport": a_, "flights": len(g), "actual >45 min per 100": round(100 * y.mean(), 1),
+                             "mean predicted per 100": round(100 * p.mean(), 1), f"flagged per 100 (p≥{thr})": round(100 * (p >= thr).mean(), 1),
+                             "AUC": round(safe_auc(y, p), 3), "PR-AUC": round(safe_ap(y, p), 3), "Brier": round(brier_score_loss(y, p), 4),
+                             "precision @ top 10%": round(top, 3), "lift @ top 10%": round(top / max(y.mean(), 1e-9), 2)})
+            st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+            st.caption("Airports compared only as rates per 100 flights (sample volumes differ).")
+            cb = ev.assign(bin=ev.groupby("airport")["p_delay45"].transform(lambda s: pd.qcut(s, 10, labels=False, duplicates="drop")))
+            cb = cb.groupby(["airport", "bin"]).agg(pred=("p_delay45", "mean"), obs=("actual_delay45", "mean"), n=("p_delay45", "size")).reset_index()
+            fig = go.Figure()
+            mx = float(max(cb["pred"].max(), cb["obs"].max())) * 1.05
+            fig.add_trace(go.Scatter(x=[0, mx], y=[0, mx], mode="lines", line=dict(dash="dash", color="grey"), name="perfect calibration"))
+            for a_, g in cb.groupby("airport"):
+                fig.add_trace(go.Scatter(x=g["pred"], y=g["obs"], mode="lines+markers", name=a_, customdata=g["n"],
+                                         hovertemplate="pred %{x:.2f} · obs %{y:.2f} · n=%{customdata}<extra></extra>"))
+            fig.update_layout(height=360, xaxis_title="mean predicted p(>45 min)", yaxis_title="observed rate",
+                              margin=dict(l=10, r=10, t=30, b=10), title="Reliability (deciles, recomputed)")
+            st.plotly_chart(fig, width="stretch")
 
-    st.markdown("### Failure cases (one-line explanation each, rule-derived from timestamped observations)")
+    st.markdown("### Where it went wrong")
+    st.caption("The biggest misses on the 2025 test data, each with a one-line reason worked out by rules from the "
+               "timestamped weather reports. Showing these is part of an honest evaluation.")
     if CAP_FAIL.exists():
         cf = load_csv(str(CAP_FAIL), CAP_FAIL.stat().st_mtime)
         rows = []
@@ -956,10 +1022,10 @@ with tab_ev:
             why = r.get("why", r.get("explanation"))
             if why is None or pd.isna(why):
                 why = R.explain_miss(blk, wx_all[wx_all["airport"] == r["airport"]]) if pd.notna(start) else "n/a"
-            rows.append({"case": r["case_id"], "airport": r["airport"], "block (local)": str(r["block_start_local"]),
-                         "horizon_h": r["horizon_h"], "pred /100": round(100 * r["y_pred"]), "actual /100": round(100 * r["y_true"]),
-                         "abs err /100": round(100 * r["abs_err"]), "explanation": why})
-        st.markdown("**Capacity stress** (`capacity_failures.csv`)")
+            rows.append({"airport": r["airport"], "6h block (local)": str(r["block_start_local"])[:16],
+                         "warning time": f"{int(r['horizon_h'])}h", "forecast /100": round(100 * r["y_pred"]),
+                         "actual /100": round(100 * r["y_true"]), "why it missed": why})
+        st.markdown("**Congestion forecast** (`capacity_failures.csv`)")
         st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
         with st.expander("Weather columns in capacity_failures.csv"):
             st.dataframe(_safe(cf), hide_index=True, width="stretch")
@@ -973,12 +1039,13 @@ with tab_ev:
             why = r.get("why", r.get("explanation"))
             if why is None or pd.isna(why):
                 why = R.explain_flight_miss(row, wx_all[wx_all["airport"] == r["airport"]]) if pd.notna(su) else "n/a"
-            rows.append({"case": r["case"], "flight_id": str(r["flight_id"]), "airport": r["airport"],
-                         "side": str(r["side"]).upper(), "sched_local": str(r["sched_local"]), "horizon_h": r["horizon_h"],
-                         "p_delay45": round(float(r["p_delay45"]), 3), "actual >45": int(r["y_true"]),
-                         "top_factors": str(r.get("top_factors", "")), "explanation": why})
-        st.markdown("**Flight delay risk** (`delay_failures.csv`)")
-        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+            rows.append({"type": str(r["case"]).replace("_", " "), "airport": r["airport"],
+                         "dep/arr": {"DEP": "departure", "ARR": "arrival"}.get(str(r["side"]).upper(), r["side"]),
+                         "scheduled (local)": str(r["sched_local"])[:16], "warning time": f"{int(r['horizon_h'])}h",
+                         "chance given": f"{float(r['p_delay45']):.0%}", "really >45 min late?": "yes" if int(r["y_true"]) else "no",
+                         "model's reasons": explain_factors(r.get("top_factors", "")), "why it missed": why})
+        st.markdown("**Flight delay model** (`delay_failures.csv`)")
+        st.dataframe(pd.DataFrame(rows).drop_duplicates(), hide_index=True, width="stretch")
         with st.expander("Weather columns in delay_failures.csv"):
             st.dataframe(_safe(df_), hide_index=True, width="stretch")
 
@@ -995,34 +1062,57 @@ with tab_ev:
 
 # ---------------- Data & limits ----------------
 with tab_lim:
-    st.markdown(f"""
-### Data & limits
-- **Sample data, not the full schedule.** The provided BTS file is a sample (~6 ATL arrivals/day), so the true arrival
-  rate (AAR) cannot be computed. **Capacity stress is a proxy**: the delay/cancellation rate of sampled flights per {B:g}h block.
-  We compare airports only as **rates per 100 flights**.
-- **Alert lines.** WATCH/ACTION fire when the forecast is worse than {C.RULES['stress_watch_q']:.0%} / {C.RULES['stress_action_q']:.0%}
-  of this airport's real {B:g}h blocks in the training period. On the 2025 test set ACTION fires on ~2% of blocks, and those
-  blocks really were disrupted ~4× more than normal ones. Each block also shows the typical value for its time of day and
-  month (`baseline_hist`) and the naive "same as last block" guess.
-- **Weather time-zone fix.** In the provided CSV, weather attached to a flight at *local* hour H is really the observation at
-  *UTC* hour H (verified against raw METARs, temp error 0.03 °C). We relabel each observation to its true `obs_utc`
-  (4–6 h before the flight).
-- **Hourly weather.** The weather timeline uses the organisers' hourly file (every UTC hour, with wind direction) for
-  ATL and DFW: 24 readings a day instead of the ~9 attached to sampled flights. A row stamped hour T holds weather
-  observed *during* hour T (it matches the METAR at ~T:52), so we treat it as known only from T+1h; using T would leak
-  up to an hour of future weather into the forecasts.
-- **Wind direction.** From the hourly file; where it has none (calm/variable), from public METARs (Iowa Environmental
-  Mesonet ASOS archive), which also supply gusts. Crosswind/tailwind are computed against the runway heading (ATL 80°, DFW 180°).
-  When direction is missing, **crosswind = full wind speed (upper bound)**, flagged and drawn as ▵. The rule then says *verify direction*.
-- **Observations, not forecasts.** Inputs are observations available at issue time, so weather that develops later is invisible.
-  This is our main failure mode. Next: TAF/convective forecasts.
-- **No leakage.** For each target we use the smallest horizon that was already issued at decision time. Rules read only
-  observations ≤ decision time. Test period never used in training.
-  {"Flight issue time is nominal (scheduled time − horizon) because the prediction file has no issue column." if issue_nominal else ""}
-- **Joins.** Flight details come from `flight_sides.parquet`, joined on **(flight_id, side)**. A flight between ATL and DFW
-  appears once per side and is never joined on flight_id alone.
-- **Human in the loop.** Recommendations come from transparent rules (thresholds in `src/dash_config.py`). Every card lists the
-  timestamped values used. Decisions are logged with the operator's note.
-""")
+    st.subheader("Data & limits")
+    st.caption("What the data can and can't tell us, the problems we found and fixed, and how we kept the test honest.")
+    st.markdown("##### What the data is")
+    theme.info_cards([
+        ("✈️", "A sample, not the full schedule",
+         f"The flight file is a sample (~6 ATL arrivals a day), so the true arrival rate (AAR) can't be counted. We forecast a "
+         f"<b>disruption proxy</b>: the share of flights per {B:g}h block with an ATC/airport or weather delay ≥15 min, or "
+         "cancelled. Airports are only compared as <b>rates per 100 flights</b>."),
+        ("🌦", "Hourly weather + wind direction",
+         "ATL/DFW weather comes from the organisers' hourly file (24 readings a day, with wind direction). Gaps in direction "
+         "and all gusts come from public METARs (Iowa Environmental Mesonet)."),
+        ("🌍", "Works for any airport",
+         "No airport is hard-coded. <code>python src/pipeline.py --airports KORD KDEN</code> looks up the time zone and "
+         "runway heading from public data and downloads the wind automatically. Tested on ORD, DEN and SEA."),
+    ])
+    st.markdown("##### Problems we found and fixed")
+    theme.info_cards([
+        ("🕓", "Weather stamped 4–6 hours wrong",
+         "In the flight file, the weather for a flight at <i>local</i> hour H is really the reading at <i>UTC</i> hour H "
+         "(checked against raw METARs: 0.03 °C error). We relabel every reading to its true time."),
+        ("⏱", "Hourly file stamped an hour early",
+         "A row stamped hour T holds weather observed <i>during</i> hour T (it matches the METAR at ~T:52). We treat it as "
+         "known only from T+1h, otherwise forecasts would see up to an hour into the future."),
+        ("🧭", "Runway direction, not raw wind",
+         "Crosswind and tailwind are computed against the runway (ATL 80°, DFW 180°). When wind direction is unknown, "
+         "crosswind is shown as an <b>upper bound</b> (▵) and the rule says <i>verify direction</i>."),
+    ])
+    st.markdown("##### Keeping it honest")
+    theme.info_cards([
+        ("🔒", "No peeking ahead",
+         "Every forecast and rule uses only weather observed, and flights finished, before it was made. Trained on 2023 – "
+         "mid-2024; all results are on Jan–Jul 2025, which the models never saw. Automated leakage tests check this."),
+        ("📏", f"Alert lines from real history",
+         f"WATCH / ACTION fire when the forecast is worse than {C.RULES['stress_watch_q']:.0%} / "
+         f"{C.RULES['stress_action_q']:.0%} of this airport's real {B:g}h blocks in training. On 2025 data, ACTION fires on "
+         "~2% of blocks, which really were ~4× more disrupted than normal."),
+        ("🧑‍✈️", "The human decides",
+         "Numbers come from statistics and machine learning; advice comes from four fixed rules (thresholds in "
+         "<code>src/dash_config.py</code>). Every alert shows its evidence, and decisions are logged with a note."),
+    ])
+    st.markdown("##### Limits and next steps")
+    theme.info_cards([
+        ("🌩", "Observations, not forecasts",
+         "Inputs are weather reports up to the moment of the forecast, so a storm that hasn't started yet is invisible. "
+         "This is the main failure mode (see ③). Next: add TAF and convective weather forecasts."),
+        ("🧳", "Most long delays aren't weather",
+         "Of >45-minute delay minutes, 45% are late aircraft and 34% airline causes, vs 8% weather and 12% ATC/airport. "
+         "That caps how much weather can explain."),
+        ("🔗", "Joins done carefully",
+         "A flight between ATL and DFW appears once per airport; everything is joined on (flight_id, side), never "
+         "flight_id alone." + (" Flight forecast times are scheduled time − horizon." if issue_nominal else "")),
+    ])
     with st.expander("Rule thresholds in use"):
         st.json(C.RULES)

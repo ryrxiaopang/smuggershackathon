@@ -317,3 +317,10 @@ div[data-testid="stButton"] button p { font-size:1.05rem; font-weight:700; white
 
 def landing_mode_css():
     st.markdown(LANDING_ONLY_CSS, unsafe_allow_html=True)
+
+
+def info_cards(cards):
+    """cards: list of (icon, title, html_text). Same look as the landing feature cards, without the KPI pill."""
+    items = "".join(f"<div class='feat'><div class='ico'>{i}</div><h4>{html.escape(ti)}</h4><p>{x}</p></div>"
+                    for i, ti, x in cards)
+    st.markdown(f"<div class='feats'>{items}</div>", unsafe_allow_html=True)

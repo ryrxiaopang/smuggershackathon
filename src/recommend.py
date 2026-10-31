@@ -39,7 +39,7 @@ def _fmt(ts) -> str:
 def _py(v):
     if isinstance(v, (np.bool_, bool)):
         return bool(v)
-    if isinstance(v, (np.integer,)):
+    if isinstance(v, np.integer):
         return int(v)
     if isinstance(v, (float, np.floating)):
         return None if np.isnan(v) else round(float(v), 3)
@@ -49,6 +49,10 @@ def _py(v):
 def _ev(signal, value, unit="", ts=None, source="", threshold=None) -> dict:
     return {"signal": signal, "value": _py(value), "unit": unit,
             "obs_or_valid_time": _fmt(ts), "source": source, "threshold": threshold}
+
+
+def _has(r: pd.Series, col: str) -> bool:
+    return col in r.index and r[col] is not None and not (not isinstance(r[col], str) and pd.isna(r[col]))
 
 
 def overall_level(recs) -> str:
@@ -96,8 +100,8 @@ def window_blocks(cap, now_utc, horizon_h):
         return cap
     now = _utc(now_utc)
     s = select_forecasts(cap, now, "block_start_utc")
-    return s[(s["block_start_utc"] > now - pd.Timedelta(hours=BLOCK_HOURS))
-             & (s["block_start_utc"] < now + pd.Timedelta(hours=horizon_h))].sort_values("block_start_utc")
+    end = s["block_end_utc"] if "block_end_utc" in s.columns else s["block_start_utc"] + pd.Timedelta(hours=BLOCK_HOURS)
+    return s[(end > now) & (s["block_start_utc"] < now + pd.Timedelta(hours=horizon_h))].sort_values("block_start_utc")
 
 
 def window_flights(fl, now_utc, horizon_h):
@@ -129,16 +133,19 @@ def rule_stress(blocks: pd.DataFrame, now_utc, cfg=RULES) -> Rec:
     r = b.loc[b["stress_rate_pred"].idxmax()]
     pred, p80, p90 = float(r["stress_rate_pred"]), float(r[wc]), float(r[ac])
     start = r["block_start_utc"]
-    end = r["block_end_utc"] if "block_end_utc" in r.index and pd.notna(r["block_end_utc"]) \
-        else start + pd.Timedelta(hours=BLOCK_HOURS)
+    end = r["block_end_utc"] if _has(r, "block_end_utc") else start + pd.Timedelta(hours=BLOCK_HOURS)
     block = f"{_fmt(start)}–{_utc(end):%H:%MZ}"
-    h = r.get("horizon_h")
     src = "capacity_preds.parquet"
-    if h is not None and pd.notna(h):
-        src += f" (horizon {int(h)}h, issued {_fmt(r.get('issue_time_utc'))})"
+    if _has(r, "horizon_h"):
+        src += f" (horizon {int(r['horizon_h'])}h, issued {_fmt(r.get('issue_time_utc'))})"
+    hist_src = str(r["hist_source"]) if _has(r, "hist_source") else "train period"
     ev = [_ev("predicted stress_rate (peak block)", pred, "share of flights", start, src),
-          _ev("airport historical p80", p80, "share of flights", None, "train period", "WATCH if above"),
-          _ev("airport historical p90", p90, "share of flights", None, "train period", "ACTION if above")]
+          _ev("airport threshold p80", p80, "share of flights", None, hist_src, "WATCH if above"),
+          _ev("airport threshold p90", p90, "share of flights", None, hist_src, "ACTION if above")]
+    if _has(r, "baseline_hist"):
+        ev.append(_ev("historical normal for this block (baseline_hist)", r["baseline_hist"], "share of flights", start, "capacity_preds.parquet"))
+    if _has(r, "baseline_persist"):
+        ev.append(_ev("persistence baseline", r["baseline_persist"], "share of flights", start, "capacity_preds.parquet"))
     txt = f"Predicted stress {pred*100:.0f}/100 flights for block {block}"
     if pred > p90:
         return Rec("ACTION", f"Consider reducing arrival rate / ground delay program for block {block}.",
@@ -232,9 +239,9 @@ def rule_flight_share(flights: pd.DataFrame, now_utc, horizon_h, cfg=RULES) -> R
           _ev(f"share with p_delay45 ≥ {thr:.2f}", share, "share", now, src,
               f"WATCH ≥{cfg['share_watch']:.0%}, ACTION ≥{cfg['share_action']:.0%}")]
     for _, r in hi.head(5).iterrows():
-        issued = f", issued {_fmt(r['issue_time_utc'])}" if "issue_time_utc" in r.index else ""
-        ev.append(_ev(f"{r.get('flight_id', '?')} {r.get('side', '')} p_delay45", r["p_delay45"], "prob",
-                      r["sched_utc"], src + issued))
+        label = r["flight_label"] if _has(r, "flight_label") else r.get("flight_id", "?")
+        issued = f", issued {_fmt(r['issue_time_utc'])}" if _has(r, "issue_time_utc") else ""
+        ev.append(_ev(f"{label} {r.get('side', '')} p_delay45", r["p_delay45"], "prob", r["sched_utc"], src + issued))
     reason = f"{len(hi)} of {n} flights ({share:.0%}) in next {horizon_h}h have p(>45 min) ≥ {thr:.2f}."
     if share >= cfg["share_action"]:
         return Rec("ACTION", "Prioritise gate/crew buffers; pre-position reserve crew for flagged flights.", reason, ev)
@@ -253,9 +260,11 @@ def evaluate_all(cap, wx, flights, now_utc, horizon_h, cfg=RULES):
     ]
 
 
-# ---------- failure-case explanation (rules, not ML) ----------
+# ---------- failure-case explanations (rules, not ML) ----------
 def _adverse(w, cfg):
     out = []
+    if w is None or w.empty:
+        return out
     for _, r in w.iterrows():
         tags = []
         g = r.get("wx_group")
@@ -272,26 +281,38 @@ def _adverse(w, cfg):
     return out
 
 
-def explain_miss(block: pd.Series, wx: pd.DataFrame, cfg=RULES) -> str:
-    start = _utc(block["block_start_utc"])
-    end = start + pd.Timedelta(hours=BLOCK_HOURS)
-    issue = block.get("issue_time_utc")
-    if issue is None or pd.isna(issue):
-        issue = start - pd.Timedelta(hours=float(block.get("horizon_h", 3)))
-    issue = _utc(issue)
-    lb = pd.Timedelta(hours=cfg["wx_lookback_h"])
-    pre = _adverse(wx[(wx["obs_utc"] > issue - lb) & (wx["obs_utc"] <= issue)], cfg)
-    dur = _adverse(wx[(wx["obs_utc"] >= start) & (wx["obs_utc"] < end)], cfg)
-    n = int(block.get("n_flights", 0) or 0)
-    err = float(block["stress_rate_actual"]) - float(block["stress_rate_pred"])
-    if err > 0:
+def _explain(missed, pre, dur, n_txt=""):
+    if missed:
         if dur and not pre:
             return f"Missed: weather developed after issue time ({dur[0]}); observation-only inputs cannot see it — needs TAF/forecast feeds."
         if pre:
             return f"Missed despite adverse obs at issue time ({pre[0]}) — model under-weights this signal."
-        return f"Missed with no local weather signal before or during block — likely non-weather cause (carrier, late aircraft, upstream NAS) or tiny sample (n={n})."
+        return f"Missed with no local weather signal before or during — likely non-weather cause (carrier, late aircraft, upstream NAS){n_txt}."
     if pre and not dur:
-        return f"False alarm: adverse obs at issue time ({pre[0]}) cleared before the block."
+        return f"False alarm: adverse obs at issue time ({pre[0]}) cleared before the event."
     if pre:
-        return f"False alarm: weather present but flights coped — small sample (n={n}) or flow measures absorbed it."
-    return f"False alarm without weather signal — time-of-day effect overstated; small sample (n={n})."
+        return f"False alarm: weather present but operations coped (flow measures may have absorbed it){n_txt}."
+    return f"False alarm without weather signal — time-of-day/calendar effect overstated{n_txt}."
+
+
+def explain_miss(block: pd.Series, wx: pd.DataFrame, cfg=RULES) -> str:
+    start = _utc(block["block_start_utc"])
+    end = _utc(block["block_end_utc"]) if _has(block, "block_end_utc") else start + pd.Timedelta(hours=BLOCK_HOURS)
+    issue = _utc(block["issue_time_utc"]) if _has(block, "issue_time_utc") \
+        else start - pd.Timedelta(hours=float(block.get("horizon_h", 3)))
+    lb = pd.Timedelta(hours=cfg["wx_lookback_h"])
+    pre = _adverse(wx[(wx["obs_utc"] > issue - lb) & (wx["obs_utc"] <= issue)], cfg)
+    dur = _adverse(wx[(wx["obs_utc"] >= start) & (wx["obs_utc"] < end)], cfg)
+    n_txt = f"; small sample (n={int(block['n_flights'])})" if _has(block, "n_flights") else ""
+    missed = float(block["stress_rate_actual"]) > float(block["stress_rate_pred"])
+    return _explain(missed, pre, dur, n_txt)
+
+
+def explain_flight_miss(row: pd.Series, wx: pd.DataFrame, cfg=RULES) -> str:
+    sched = _utc(row["sched_utc"])
+    issue = _utc(row["issue_time_utc"]) if _has(row, "issue_time_utc") \
+        else sched - pd.Timedelta(hours=float(row.get("horizon_h", 3)))
+    lb = pd.Timedelta(hours=cfg["wx_lookback_h"])
+    pre = _adverse(wx[(wx["obs_utc"] > issue - lb) & (wx["obs_utc"] <= issue)], cfg)
+    dur = _adverse(wx[(wx["obs_utc"] >= sched - pd.Timedelta(hours=2)) & (wx["obs_utc"] <= sched + pd.Timedelta(hours=1))], cfg)
+    return _explain(int(row["actual_delay45"]) == 1, pre, dur)

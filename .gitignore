@@ -1,8 +1,7 @@
 # data too large for git
 data/raw/*
 !data/raw/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
+# processed parquets are small (~1 MB) and committed so teammates can skip the pipeline
 # python
 __pycache__/
 *.pyc

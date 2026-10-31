@@ -959,6 +959,38 @@ with tab_ev:
         fig.update_layout(margin=dict(l=10, r=10, t=40, b=10), yaxis_title="PR-AUC", xaxis_title="warning time", legend_title="")
         g2.plotly_chart(fig, width="stretch")
 
+    na_path = C.OUTPUTS / "new_airport_metrics.json"
+    if na_path.exists():
+        na = json.loads(na_path.read_text())
+        st.markdown("**Airports it has never seen** · models fitted on ATL + DFW, frozen, then scored on other airports' 2025 data")
+        d3, na_cap = na.get("delay", {}).get("h3", {}), na.get("capacity", {})
+        rows = []
+        for ap_ in list(na.get("never_seen", [])) + list(na.get("trained_on", [])):
+            d, c = d3.get(ap_), na_cap.get(ap_)
+            if not d:
+                continue
+            rows.append({"airport": ap_, "in training?": "yes" if d["seen_in_training"] else "never seen",
+                         "flights (2025)": d["flights"], "late per 100": round(d["late_per_100"], 1),
+                         "riskiest 10%: really late": f"{d['top10_late_share']:.0%} ({d['top10_lift']:.1f}×)",
+                         "delay PR-AUC: model / timetable": f"{d['pr_auc_model']:.3f} / {d['pr_auc_timetable']:.3f}",
+                         "congestion error: model / own history / same as last": (
+                             f"{c['rmse_model']:.1f} / {c['rmse_hist']:.1f} / {c['rmse_persist']:.1f}" if c else "")})
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+        new = [a_ for a_ in na.get("never_seen", []) if a_ in d3]
+        good = [a_ for a_ in new if d3[a_]["pr_auc_model"] > d3[a_]["pr_auc_timetable"]]
+        weak = [a_ for a_ in new if a_ not in good]
+        cap_hist = [a_ for a_ in new if a_ in na_cap and na_cap[a_]["rmse_model"] <= na_cap[a_]["rmse_hist"]]
+        st.markdown(
+            (f"- **Transfers:** at {', '.join(good)} the frozen delay model beats the timetable-only model 3 hours ahead, "
+             "and its riskiest-ranked flights run late about as much more often than average as at ATL/DFW.\n" if good else "")
+            + (f"- **Weaker:** at {', '.join(weak)} it doesn't beat the timetable-only model; the weather there behaves "
+               "differently from Atlanta and Dallas.\n" if weak else "")
+            + "- **Congestion:** the frozen forecast beats \"same as last block\" everywhere"
+            + (" and the airport's own historical average at " + ", ".join(cap_hist) + "." if cap_hist else
+               ", but not each new airport's own historical average, which it never saw. Calibrating it to each "
+               "airport's normal level would be the next step.")
+            + "\n- Run it yourself: `python src/score_new_airports.py --airports KORD KDEN KSEA` (any airport in the data).")
+
     st.divider()
     st.markdown("#### Full details")
     st.caption("Every metric, baseline and chart behind the summary above. Open a section to see it.")

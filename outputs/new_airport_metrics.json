@@ -1,0 +1,328 @@
+{
+  "trained_on": [
+    "ATL",
+    "DFW"
+  ],
+  "never_seen": [
+    "ORD",
+    "DEN",
+    "SEA"
+  ],
+  "test_period": "2025-01-01 to 2025-07-31",
+  "weather_source": "flight CSV for all airports (same kind of data in training and scoring)",
+  "delay": {
+    "h3": {
+      "ORD": {
+        "seen_in_training": false,
+        "flights": 2919,
+        "late_per_100": 12.709832134292565,
+        "pr_auc_model": 0.23950010569126873,
+        "pr_auc_timetable": 0.21472378767092873,
+        "pr_auc_guess": 0.12709832134292565,
+        "roc_auc_model": 0.6662632708069751,
+        "roc_auc_timetable": 0.6437018410930617,
+        "top10_late_share": 0.30927835051546393,
+        "top10_lift": 2.4333787200933674
+      },
+      "DEN": {
+        "seen_in_training": false,
+        "flights": 3057,
+        "late_per_100": 13.084723585214261,
+        "pr_auc_model": 0.25664174824871877,
+        "pr_auc_timetable": 0.21554468023449036,
+        "pr_auc_guess": 0.1308472358521426,
+        "roc_auc_model": 0.6946316334211518,
+        "roc_auc_timetable": 0.662092585622883,
+        "top10_late_share": 0.29508196721311475,
+        "top10_lift": 2.2551639344262298
+      },
+      "SEA": {
+        "seen_in_training": false,
+        "flights": 1528,
+        "late_per_100": 7.787958115183247,
+        "pr_auc_model": 0.11189558322692829,
+        "pr_auc_timetable": 0.12086455824394413,
+        "pr_auc_guess": 0.07787958115183247,
+        "roc_auc_model": 0.5936715353281128,
+        "roc_auc_timetable": 0.6149900698391493,
+        "top10_late_share": 0.13157894736842105,
+        "top10_lift": 1.689517912428129
+      },
+      "ATL": {
+        "seen_in_training": true,
+        "flights": 3022,
+        "late_per_100": 11.71409662475182,
+        "pr_auc_model": 0.25262564390996695,
+        "pr_auc_timetable": 0.20720510981702234,
+        "pr_auc_guess": 0.1171409662475182,
+        "roc_auc_model": 0.692873372635716,
+        "roc_auc_timetable": 0.6707694881372872,
+        "top10_late_share": 0.31125827814569534,
+        "top10_lift": 2.6571257529838737
+      },
+      "DFW": {
+        "seen_in_training": true,
+        "flights": 2682,
+        "late_per_100": 14.876957494407158,
+        "pr_auc_model": 0.28155308379590505,
+        "pr_auc_timetable": 0.23727539364314096,
+        "pr_auc_guess": 0.1487695749440716,
+        "roc_auc_model": 0.6623221435103308,
+        "roc_auc_timetable": 0.6241342515289539,
+        "top10_late_share": 0.3656716417910448,
+        "top10_lift": 2.457973291437549
+      }
+    },
+    "h6": {
+      "ORD": {
+        "seen_in_training": false,
+        "flights": 2919,
+        "late_per_100": 12.709832134292565,
+        "pr_auc_model": 0.24946898270489246,
+        "pr_auc_timetable": 0.21472378767092873,
+        "pr_auc_guess": 0.12709832134292565,
+        "roc_auc_model": 0.6651863731186026,
+        "roc_auc_timetable": 0.6437018410930617,
+        "top10_late_share": 0.29553264604810997,
+        "top10_lift": 2.3252285547558844
+      },
+      "DEN": {
+        "seen_in_training": false,
+        "flights": 3057,
+        "late_per_100": 13.084723585214261,
+        "pr_auc_model": 0.2408616083443948,
+        "pr_auc_timetable": 0.21554468023449036,
+        "pr_auc_guess": 0.1308472358521426,
+        "roc_auc_model": 0.6801345502446368,
+        "roc_auc_timetable": 0.662092585622883,
+        "top10_late_share": 0.28524590163934427,
+        "top10_lift": 2.1799918032786887
+      },
+      "SEA": {
+        "seen_in_training": false,
+        "flights": 1528,
+        "late_per_100": 7.787958115183247,
+        "pr_auc_model": 0.11473369175093498,
+        "pr_auc_timetable": 0.12086455824394413,
+        "pr_auc_guess": 0.07787958115183247,
+        "roc_auc_model": 0.5991972374471435,
+        "roc_auc_timetable": 0.6149900698391493,
+        "top10_late_share": 0.11842105263157894,
+        "top10_lift": 1.520566121185316
+      },
+      "ATL": {
+        "seen_in_training": true,
+        "flights": 3022,
+        "late_per_100": 11.71409662475182,
+        "pr_auc_model": 0.2372994711896687,
+        "pr_auc_timetable": 0.20720510981702234,
+        "pr_auc_guess": 0.1171409662475182,
+        "roc_auc_model": 0.6816692289448496,
+        "roc_auc_timetable": 0.6707694881372872,
+        "top10_late_share": 0.31125827814569534,
+        "top10_lift": 2.6571257529838737
+      },
+      "DFW": {
+        "seen_in_training": true,
+        "flights": 2682,
+        "late_per_100": 14.876957494407158,
+        "pr_auc_model": 0.2652054360308858,
+        "pr_auc_timetable": 0.23727539364314096,
+        "pr_auc_guess": 0.1487695749440716,
+        "roc_auc_model": 0.653602358941594,
+        "roc_auc_timetable": 0.6241342515289539,
+        "top10_late_share": 0.33955223880597013,
+        "top10_lift": 2.282403770620581
+      }
+    },
+    "h12": {
+      "ORD": {
+        "seen_in_training": false,
+        "flights": 2919,
+        "late_per_100": 12.709832134292565,
+        "pr_auc_model": 0.24361076034929702,
+        "pr_auc_timetable": 0.21472378767092873,
+        "pr_auc_guess": 0.12709832134292565,
+        "roc_auc_model": 0.6700186605846982,
+        "roc_auc_timetable": 0.6437018410930617,
+        "top10_late_share": 0.29896907216494845,
+        "top10_lift": 2.352266096090255
+      },
+      "DEN": {
+        "seen_in_training": false,
+        "flights": 3057,
+        "late_per_100": 13.084723585214261,
+        "pr_auc_model": 0.2008099723330139,
+        "pr_auc_timetable": 0.21554468023449036,
+        "pr_auc_guess": 0.1308472358521426,
+        "roc_auc_model": 0.6500451637184795,
+        "roc_auc_timetable": 0.662092585622883,
+        "top10_late_share": 0.22950819672131148,
+        "top10_lift": 1.7540163934426232
+      },
+      "SEA": {
+        "seen_in_training": false,
+        "flights": 1528,
+        "late_per_100": 7.787958115183247,
+        "pr_auc_model": 0.11300637103992602,
+        "pr_auc_timetable": 0.12086455824394413,
+        "pr_auc_guess": 0.07787958115183247,
+        "roc_auc_model": 0.5986545079351826,
+        "roc_auc_timetable": 0.6149900698391493,
+        "top10_late_share": 0.125,
+        "top10_lift": 1.6050420168067225
+      },
+      "ATL": {
+        "seen_in_training": true,
+        "flights": 3022,
+        "late_per_100": 11.71409662475182,
+        "pr_auc_model": 0.23936348175859878,
+        "pr_auc_timetable": 0.20720510981702234,
+        "pr_auc_guess": 0.1171409662475182,
+        "roc_auc_model": 0.6985421484173169,
+        "roc_auc_timetable": 0.6707694881372872,
+        "top10_late_share": 0.30132450331125826,
+        "top10_lift": 2.572323867250346
+      },
+      "DFW": {
+        "seen_in_training": true,
+        "flights": 2682,
+        "late_per_100": 14.876957494407158,
+        "pr_auc_model": 0.2604208132358336,
+        "pr_auc_timetable": 0.23727539364314096,
+        "pr_auc_guess": 0.1487695749440716,
+        "roc_auc_model": 0.6427308964483043,
+        "roc_auc_timetable": 0.6241342515289539,
+        "top10_late_share": 0.3208955223880597,
+        "top10_lift": 2.156996970037033
+      }
+    }
+  },
+  "capacity": {
+    "ORD": {
+      "seen_in_training": false,
+      "blocks": 519,
+      "rows": 1557,
+      "rmse_model": 18.963840534094857,
+      "rmse_hist": 18.63796388874988,
+      "rmse_persist": 25.698717429351802,
+      "by_horizon": {
+        "h3": {
+          "rmse_model": 18.6879290623935,
+          "rmse_hist": 18.63796388874988,
+          "rmse_persist": 25.602344475840294
+        },
+        "h6": {
+          "rmse_model": 19.143108190268684,
+          "rmse_hist": 18.63796388874988,
+          "rmse_persist": 25.602344475840294
+        },
+        "h12": {
+          "rmse_model": 19.05739907706068,
+          "rmse_hist": 18.63796388874988,
+          "rmse_persist": 25.890387158592866
+        }
+      }
+    },
+    "DEN": {
+      "seen_in_training": false,
+      "blocks": 535,
+      "rows": 1605,
+      "rmse_model": 18.595607145757604,
+      "rmse_hist": 17.60265132472241,
+      "rmse_persist": 25.747073750973197,
+      "by_horizon": {
+        "h3": {
+          "rmse_model": 18.593556820223615,
+          "rmse_hist": 17.60265132472241,
+          "rmse_persist": 25.9821113137627
+        },
+        "h6": {
+          "rmse_model": 18.487137519249586,
+          "rmse_hist": 17.60265132472241,
+          "rmse_persist": 25.9821113137627
+        },
+        "h12": {
+          "rmse_model": 18.705485999447433,
+          "rmse_hist": 17.60265132472241,
+          "rmse_persist": 25.270441301501805
+        }
+      }
+    },
+    "SEA": {
+      "seen_in_training": false,
+      "blocks": 270,
+      "rows": 810,
+      "rmse_model": 17.979610762740254,
+      "rmse_hist": 17.549036507335146,
+      "rmse_persist": 22.949783480424866,
+      "by_horizon": {
+        "h3": {
+          "rmse_model": 18.31388187038838,
+          "rmse_hist": 17.549036507335146,
+          "rmse_persist": 23.04965136724431
+        },
+        "h6": {
+          "rmse_model": 17.81993892150526,
+          "rmse_hist": 17.549036507335146,
+          "rmse_persist": 23.04965136724431
+        },
+        "h12": {
+          "rmse_model": 17.800301042685128,
+          "rmse_hist": 17.549036507335146,
+          "rmse_persist": 22.74873247220888
+        }
+      }
+    },
+    "ATL": {
+      "seen_in_training": true,
+      "blocks": 539,
+      "rows": 1617,
+      "rmse_model": 17.76764422416001,
+      "rmse_hist": 18.276850800423134,
+      "rmse_persist": 24.952879982019912,
+      "by_horizon": {
+        "h3": {
+          "rmse_model": 17.72880492166584,
+          "rmse_hist": 18.276850800423134,
+          "rmse_persist": 24.93483982286375
+        },
+        "h6": {
+          "rmse_model": 17.629142343076733,
+          "rmse_hist": 18.276850800423134,
+          "rmse_persist": 24.94243105850172
+        },
+        "h12": {
+          "rmse_model": 17.943532543120817,
+          "rmse_hist": 18.276850800423134,
+          "rmse_persist": 24.981344120989313
+        }
+      }
+    },
+    "DFW": {
+      "seen_in_training": true,
+      "blocks": 510,
+      "rows": 1530,
+      "rmse_model": 21.3605237749421,
+      "rmse_hist": 21.729376132013112,
+      "rmse_persist": 28.654206872973166,
+      "by_horizon": {
+        "h3": {
+          "rmse_model": 21.238853698077452,
+          "rmse_hist": 21.72937613201311,
+          "rmse_persist": 28.37457032169511
+        },
+        "h6": {
+          "rmse_model": 21.300435404393284,
+          "rmse_hist": 21.72937613201311,
+          "rmse_persist": 28.498685311260108
+        },
+        "h12": {
+          "rmse_model": 21.54108801789107,
+          "rmse_hist": 21.72937613201311,
+          "rmse_persist": 29.084349900700456
+        }
+      }
+    }
+  }
+}

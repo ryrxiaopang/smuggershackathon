@@ -15,3 +15,5 @@ outputs/*.joblib
 
 # per-user dashboard decision log
 outputs/decision_log.csv
+# never-seen-airport test inputs (rebuilt by src/score_new_airports.py)
+data/processed/flightwx_*/

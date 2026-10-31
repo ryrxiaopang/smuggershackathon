@@ -312,6 +312,9 @@ def main():
     ap.add_argument("--out-dir", default=str(config.PROCESSED),
                     help="where to write the parquets (default: the shared data/processed)")
     ap.add_argument("--offline", action="store_true", help="no downloads; use cached files only")
+    ap.add_argument("--no-hourly", action="store_true",
+                    help="build the weather timeline from the flight CSV even where the hourly file exists "
+                         "(used by src/score_new_airports.py so every airport gets the same kind of weather)")
     a = ap.parse_args()
     airports = ensure_airports(a.airports, offline=a.offline)
     missing_tz = [x for x in airports if x not in config.AIRPORT_TZ]
@@ -325,7 +328,7 @@ def main():
     dates = pd.to_datetime(df["FL_DATE"])
     ensure_wind(airports, dates.min() - pd.Timedelta(days=1), dates.max() + pd.Timedelta(days=2), a.offline)
     wind = load_wind(airports)
-    hourly = load_hourly(airports, wind)
+    hourly = None if a.no_hourly else load_hourly(airports, wind)
 
     fs = explode_sides(df, airports)
     fs = add_times(fs)

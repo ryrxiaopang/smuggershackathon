@@ -42,6 +42,22 @@ Codes can be FAA (`ORD`) or ICAO (`KORD`). For an airport not in `config.py` the
 
 Every run re-checks the weather time-zone rule per airport by comparing the CSV wind speed with the independent IEM wind speed. Tested: ATL 0.07, DFW 0.05, ORD 0.06, DEN 0.05, SEA 0.06 kt mean difference at the relabelled hour vs ~2 kt one hour either side, so the rule holds beyond ATL/DFW.
 
+## Testing on airports the models never saw
+
+```bash
+python src/score_new_airports.py --airports KORD KDEN KSEA
+```
+Both models are fitted once on ATL + DFW (train 2023-01 → 2024-06, tuned on 2024-H2), frozen, and then scored on the other airports' 2025 data with no retraining. Airport identity is left out of the features, and every airport uses the flight-CSV weather (the organiser hourly file only covers ATL/DFW), so training and scoring see the same kind of data. Results go to `outputs/new_airport_metrics.json` and the dashboard (tab ③). On 2025 data, 3 hours ahead:
+
+| Airport | Riskiest 10% really >45 min late | Delay PR-AUC model / timetable-only | Congestion error model / own history / same as last block |
+|---|---|---|---|
+| ORD (never seen) | 31% (2.4× average) | 0.240 / 0.215 | 19.0 / 18.6 / 25.7 |
+| DEN (never seen) | 30% (2.3×) | 0.257 / 0.216 | 18.6 / 17.6 / 25.7 |
+| SEA (never seen) | 13% (1.7×) | 0.112 / 0.121 | 18.0 / 17.5 / 22.9 |
+| ATL / DFW (seen) | 31% (2.7×) / 37% (2.5×) | 0.253 / 0.207 · 0.282 / 0.237 | 17.8 / 18.3 / 25.0 · 21.4 / 21.7 / 28.7 |
+
+The delay model transfers to ORD and DEN; it does not beat the timetable-only model at SEA, where the weather behaves differently. The congestion forecast beats "same as last block" everywhere but not a new airport's own historical average, which it never saw; calibrating to each airport's normal level is the next step.
+
 ## Data and known issues
 
 - **Flights + weather:** the provided `Flight_Data_With_Weather_Final.csv` (148,273 BTS flights, Jan 2023 – Jul 2025, weather at both ends). We keep flights departing from or arriving at ATL/DFW (25,299 rows).

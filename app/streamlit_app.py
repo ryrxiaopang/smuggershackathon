@@ -21,8 +21,12 @@ from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_s
 from src import dash_config as C
 from src import recommend as R
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import theme  # noqa: E402  styling + animated landing hero
+
 st.set_page_config(page_title="Airport Capacity & Delay-Risk", page_icon="✈", layout="wide")
-LEVEL_COLOR = {"NORMAL": "#2e7d32", "WATCH": "#ef6c00", "ACTION": "#c62828"}
+theme.inject_css()
+LEVEL_COLOR = theme.LEVEL_COLOR
 LEVEL_ICON = {"NORMAL": "🟢", "WATCH": "🟠", "ACTION": "🔴"}
 LEVEL_MEANING = {"NORMAL": "business as usual", "WATCH": "be ready, keep an eye on it", "ACTION": "act now to get ahead of it"}
 AIRPORT_NAMES = {"ATL": "Atlanta (ATL)", "DFW": "Dallas/Fort Worth (DFW)"}
@@ -260,8 +264,7 @@ def local(s, tz):
 
 
 def badge(level):
-    return (f"<span style='background:{LEVEL_COLOR[level]};color:white;padding:3px 12px;"
-            f"border-radius:12px;font-weight:700'>{level}</span>")
+    return theme.badge(level)
 
 
 def _safe(df):
@@ -562,6 +565,18 @@ if syn:
     st.warning("⚠ SYNTHETIC DEMO DATA in: " + ", ".join(syn) +
                ". Replace with real pipeline outputs (same file names) — no code change needed.")
 
+recs = R.evaluate_all(cap, wx, fl, now, horizon, tz=tz)
+overall = R.overall_level([r for _, r in recs])
+bw = R.window_blocks(cap, now, horizon)
+fw = R.window_flights(fl, now, horizon)
+thr = C.RULES["p_delay_threshold"]
+p50 = p80 = p90 = np.nan
+if not cap.empty:
+    p50, p80, p90 = (float(cap[c].iloc[0]) for c in HIST_COLS)
+peak = float(bw["stress_rate_pred"].max()) if bw is not None and not bw.empty else None
+theme.hero(ap=AIRPORT_NAMES.get(ap, ap), when=f"{now_local:%a %d %b %Y · %H:%M} local", horizon=horizon, level=overall,
+           meaning=LEVEL_MEANING[overall], peak=peak, normal=p80)
+
 tab_fc, tab_fl, tab_ev, tab_lim = st.tabs(["① Forecast & advice", "② Flights at risk", "③ How accurate is it?", "④ Data & limits"])
 
 # ---------------- Forecast ----------------
@@ -569,14 +584,6 @@ with tab_fc:
     st.subheader(f"{AIRPORT_NAMES.get(ap, ap)} · {now_local:%a %d %b %Y, %H:%M} local · next {horizon} hours")
     st.caption("The coloured box tells you whether to act. Below it: the forecast, the four checks behind the advice, "
                "and the weather reports they are based on.")
-    recs = R.evaluate_all(cap, wx, fl, now, horizon, tz=tz)
-    overall = R.overall_level([r for _, r in recs])
-    bw = R.window_blocks(cap, now, horizon)
-    fw = R.window_flights(fl, now, horizon)
-    thr = C.RULES["p_delay_threshold"]
-    p50 = p80 = p90 = np.nan
-    if not cap.empty:
-        p50, p80, p90 = (float(cap[c].iloc[0]) for c in HIST_COLS)
 
     # headline: the single most important thing, in plain words
     worst = sorted(recs, key=lambda x: -R._RANK[x[1].level])
@@ -589,7 +596,7 @@ with tab_fc:
         head = f"No action needed. Nothing unusual is expected at {ap} in the next {horizon} hours."
         why = "<div style='margin-top:4px'>All four checks below are normal.</div>"
     col = LEVEL_COLOR[overall]
-    st.markdown(f"<div style='border-left:10px solid {col};background:{col}1f;border-radius:8px;padding:14px 18px;margin:4px 0 14px 0'>"
+    st.markdown(f"<div class='status-card' style='border-left:10px solid {col};background:{col}1f;border-radius:8px;padding:14px 18px;margin:4px 0 14px 0'>"
                 f"<div style='font-size:0.85rem;letter-spacing:.05em;font-weight:700;color:{col}'>{LEVEL_ICON[overall]} {overall}"
                 f" · {LEVEL_MEANING[overall]}</div>"
                 f"<div style='font-size:1.35rem;font-weight:700;margin-top:2px'>{head}</div>{why}</div>",
@@ -625,14 +632,14 @@ with tab_fc:
             t = local(bw["block_start_utc"], tz) + pd.Timedelta(hours=B / 2)
             xs += list(t)
             col = np.where(bw["stress_rate_pred"] > p90, LEVEL_COLOR["ACTION"],
-                           np.where(bw["stress_rate_pred"] > p80, LEVEL_COLOR["WATCH"], "#5b8db8"))
+                           np.where(bw["stress_rate_pred"] > p80, LEVEL_COLOR["WATCH"], "#6366f1"))
             cd = np.stack([bw["horizon_h"].astype(int).astype(str), bw["issue_time_utc"].dt.strftime("%m-%d %H:%MZ")], axis=1)
             fig.add_trace(go.Bar(x=t, y=bw["stress_rate_pred"] * 100, width=B * 3600 * 1000 * 0.85, marker_color=col,
                                  name="forecast", customdata=cd,
                                  hovertemplate="%{y:.0f} of 100 flights · forecast made %{customdata[0]}h ahead (%{customdata[1]})<extra>forecast</extra>"))
             if "baseline_hist" in bw.columns:
                 fig.add_trace(go.Scatter(x=t, y=bw["baseline_hist"] * 100, mode="markers", name="typical for this block & month",
-                                         marker=dict(symbol="line-ew-open", size=28, color="#2e7d32", line=dict(width=3))))
+                                         marker=dict(symbol="line-ew-open", size=28, color="#10b981", line=dict(width=3))))
             if "baseline_persist" in bw.columns:
                 fig.add_trace(go.Scatter(x=t, y=bw["baseline_persist"] * 100, mode="markers", name="naive guess: same as last block",
                                          marker=dict(symbol="circle-open", size=10, color="#555")))
@@ -642,8 +649,8 @@ with tab_fc:
         if xs and not np.isnan(p50):
             x0, x1 = min(xs) - pd.Timedelta(hours=B / 2), max(xs) + pd.Timedelta(hours=B / 2)
             fig.add_trace(go.Scatter(x=[x0, x1], y=[p50 * 100] * 2, mode="lines", line=dict(width=0), showlegend=False, hoverinfo="skip"))
-            fig.add_trace(go.Scatter(x=[x0, x1], y=[p80 * 100] * 2, mode="lines", fill="tonexty", line=dict(width=1, color="#2e7d32"),
-                                     fillcolor="rgba(46,125,50,0.15)", name="normal range (WATCH above)"))
+            fig.add_trace(go.Scatter(x=[x0, x1], y=[p80 * 100] * 2, mode="lines", fill="tonexty", line=dict(width=1, color="#10b981"),
+                                     fillcolor="rgba(16,185,129,0.16)", name="normal range (WATCH above)"))
             fig.add_trace(go.Scatter(x=[x0, x1], y=[p90 * 100] * 2, mode="lines", line=dict(dash="dash", color=LEVEL_COLOR["ACTION"]),
                                      name="ACTION line"))
         fig.update_layout(height=400, margin=dict(l=10, r=10, t=60, b=10),
@@ -679,24 +686,24 @@ with tab_fc:
                             subplot_titles=(f"Crosswind across the main runway ({rh}°), knots", "Wind and gusts, knots",
                                             "Rain, mm per hour", "Weather type"))
         hov = "%{y:.0f} kt · obs %{customdata}<extra></extra>"
-        fig.add_trace(go.Scatter(x=w["t"], y=w["crosswind_kt"], mode="lines", name="crosswind", line=dict(color="#1f77b4"),
+        fig.add_trace(go.Scatter(x=w["t"], y=w["crosswind_kt"], mode="lines", name="crosswind", line=dict(color="#06b6d4", width=2.5),
                                  customdata=w["obs"], hovertemplate=hov), 1, 1)
         fig.add_trace(go.Scatter(x=k["t"], y=k["gust_crosswind_kt"], mode="markers", name="gust crosswind",
-                                 marker=dict(color="#d62728", size=7), customdata=k["obs"], hovertemplate=hov), 1, 1)
+                                 marker=dict(color="#ec4899", size=7), customdata=k["obs"], hovertemplate=hov), 1, 1)
         fig.add_trace(go.Scatter(x=u["t"], y=u["gust_crosswind_kt"], mode="markers", name="gust crosswind, at most (wind direction unknown)",
-                                 marker=dict(color="#d62728", size=10, symbol="triangle-up-open"), customdata=u["obs"],
+                                 marker=dict(color="#ec4899", size=10, symbol="triangle-up-open"), customdata=u["obs"],
                                  hovertemplate="≤%{y:.0f} kt UPPER BOUND · obs %{customdata}<extra></extra>"), 1, 1)
         fig.add_trace(go.Scatter(x=[w["t"].min(), w["t"].max()], y=[C.RULES["crosswind_action_kt"]] * 2, mode="lines",
                                  line=dict(dash="dot", color="grey"), name=f"{C.RULES['crosswind_action_kt']:.0f} kt rule"), 1, 1)
         if "wspd_kt" in w.columns:
-            fig.add_trace(go.Scatter(x=w["t"], y=w["wspd_kt"], mode="lines", name="wind speed", line=dict(color="#7f7f7f"),
+            fig.add_trace(go.Scatter(x=w["t"], y=w["wspd_kt"], mode="lines", name="wind speed", line=dict(color="#94a3b8"),
                                      customdata=w["obs"], hovertemplate=hov), 2, 1)
         if "gust_kt" in w.columns:
-            fig.add_trace(go.Scatter(x=w["t"], y=w["gust_kt"], mode="lines", name="gust", line=dict(color="#ff7f0e", dash="dot"),
+            fig.add_trace(go.Scatter(x=w["t"], y=w["gust_kt"], mode="lines", name="gust", line=dict(color="#f59e0b", dash="dot"),
                                      customdata=w["obs"], hovertemplate=hov), 2, 1)
-        fig.add_trace(go.Bar(x=w["t"], y=w["prcp_mm"], name="precip", marker_color="#17becf", customdata=w["obs"],
+        fig.add_trace(go.Bar(x=w["t"], y=w["prcp_mm"], name="precip", marker_color="#38bdf8", customdata=w["obs"],
                              hovertemplate="%{y:.1f} mm · obs %{customdata}<extra></extra>"), 3, 1)
-        fig.add_trace(go.Scatter(x=w["t"], y=w["wx_group"], mode="markers", name="wx group", marker=dict(color="#9467bd", size=8),
+        fig.add_trace(go.Scatter(x=w["t"], y=w["wx_group"], mode="markers", name="wx group", marker=dict(color="#a78bfa", size=9),
                                  customdata=w["obs"], hovertemplate="%{y} · obs %{customdata}<extra></extra>"), 4, 1)
         fig.update_yaxes(categoryorder="array", categoryarray=C.WX_GROUP_ORDER + ["unknown"], row=4, col=1)
         nl = str(now.tz_convert(tz).tz_localize(None))

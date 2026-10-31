@@ -608,8 +608,8 @@ def render_landing():
         ("🤖", "Machine learning", "LightGBM models forecast block congestion and each flight's >45-minute delay risk."),
         ("🚦", "Plain advice", "Simple rules turn forecasts into NORMAL / WATCH / ACTION with the evidence attached."),
     ])
-    _, b3, _ = st.columns([2, 2, 2])
-    if b3.button("Start exploring  →", type="primary", key="cta_bottom"):
+    _, b3, _ = st.columns([3, 2, 3])
+    if b3.button("Start exploring  →", type="primary", key="cta_bottom", width="stretch"):
         go_to("dashboard")
     st.markdown("<div class='landing-foot'>Built by Ry · Emz · Rach · Deph for Autonomous SG 2026. Data: BTS on-time sample, "
                 "organiser hourly weather, IEM METAR archive. Results are on Jan–Jul 2025, which the models never saw in "
